@@ -20,21 +20,12 @@ type DirectiveHandler struct {
 }
 
 type Info struct {
-	isa ISA
+	isa datatypes.ISA
 	directives map[string]DirectiveHandler
 	symbols map[string]datatypes.MachineAddress
 	undefSyms UndefSymChain
 	output []datatypes.MachineWord
 	line_counter datatypes.MachineAddress
-}
-
-type ISA struct {
-	instructions map[string]Instruction
-}
-
-type Instruction struct {
-	numArgs int
-	repr datatypes.MachineWord
 }
 
 type UndefSymChainLink struct {
@@ -132,7 +123,7 @@ type Repr struct {
 
 func (info *Info) firstPass(line InLine) (reprs []Repr, err error) {
 	isa := info.isa
-	idata, ifound := isa.instructions[line.op]
+	idata, ifound := isa.Instructions[line.op]
 	if !ifound {
 		// try the directives
 		directive, dfound := info.directives[line.op]
@@ -142,14 +133,14 @@ func (info *Info) firstPass(line InLine) (reprs []Repr, err error) {
 		directive.f(info, line)
 		return nil, nil
 	}
-	r := make([]Repr, 1+idata.numArgs)
-	if int(idata.numArgs) != len(line.args) {
+	r := make([]Repr, 1+idata.NumArgs)
+	if int(idata.NumArgs) != len(line.args) {
 		return nil, errors.New("number of arguments doesn't match")
 	}
 	r[0] = Repr {
 		tag: ReprComplete,
 		input: line.op,
-		out: idata.repr,
+		out: idata.Repr,
 	}
 	
 	for index, arg := range line.args {
@@ -160,7 +151,10 @@ func (info *Info) firstPass(line InLine) (reprs []Repr, err error) {
 		if err == nil {
 			r[index].tag = ReprComplete
 			r[index].symbol = arg
-			r[index].out = datatypes.MachineWord(num) // will overflow, panic maybe?
+			// can overflow, panic maybe?
+			// + immediate flag
+			r[index].out = datatypes.MachineWord(num)
+			r[0].out |= datatypes.InstImmediateFlag
 			continue
 		}
 		// aight it ain't a number
@@ -178,6 +172,9 @@ func (info *Info) firstPass(line InLine) (reprs []Repr, err error) {
 			r[index].symbol = arg
 			r[index].out = datatypes.MachineWord(newLink.addr)
 		}
+		// TODO/FIXME: decide which 
+		// syntax we should use to
+		// signify indirect mode and implement it
 	}
 
 	for _, repr := range r {
@@ -235,24 +232,7 @@ func main() {
 	}
 
 	info := Info {
-		isa: ISA {
-			map[string]Instruction {
-				"add":   Instruction { numArgs: 1, repr: 2 },
-				"br":    Instruction { numArgs: 1, repr: 0 },
-				"brneg": Instruction { numArgs: 1, repr: 5 },
-				"brpos": Instruction { numArgs: 1, repr: 1 },
-				"brzero":Instruction { numArgs: 1, repr: 4 },
-				"copy":  Instruction { numArgs: 2, repr: 13 },
-				"divide":Instruction { numArgs: 1, repr: 10 },
-				"load":  Instruction { numArgs: 1, repr: 3 },
-				"mult":  Instruction { numArgs: 1, repr: 14 },
-				"read":  Instruction { numArgs: 1, repr: 12 },
-				"stop":  Instruction { numArgs: 0, repr: 11 },
-				"store": Instruction { numArgs: 1, repr: 7 },
-				"sub":   Instruction { numArgs: 1, repr: 6 },
-				"write": Instruction { numArgs: 1, repr: 8 },
-			},
-		},
+		isa: datatypes.GetDefaultISA(),
 		directives: map[string]DirectiveHandler {
 			"space": DirectiveHandler {
 				f: func (info *Info, line InLine) {

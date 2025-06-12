@@ -2,84 +2,118 @@ package main
 
 import (
 	"fmt"
+	"bufio"
+	"log"
+	"os"
+	"strings"
 	"dubcc/datatypes"
 )
 
+type InstHandler func (*Sim, []datatypes.MachineWord)
+
 type Sim struct {
 	mem SimMem
+	handlers map[datatypes.MachineWord]InstHandler
+	isa datatypes.ISA
 }
 
 type SimMem struct {
 	work []datatypes.MachineWord
-	registers []Register
 }
 
-type RegisterTag byte
-const (
-	RegisterTagGeneralPurpose = 0
-	RegisterTagSpecial = 1 << 1
-	RegisterTagInternal = 1 << 2
-)
+func isImmediate(op datatypes.MachineWord) bool {
+	return (op & datatypes.InstImmediateFlag) != 0
+}
 
-type Register struct {
-	name string
-	desc string
-	size uint
-	longdesc string
-	tags RegisterTag
-	content datatypes.MachineWord
+func isIndirectA(op datatypes.MachineWord) bool {
+	return (op & datatypes.InstIndirectAFlag) != 0
+}
+
+func isIndirectB(op datatypes.MachineWord) bool {
+	return (op & datatypes.InstIndirectBFlag) != 0
+}
+
+func mapRegisterUnary(
+	reg *datatypes.Register,
+	mapfunc func (datatypes.MachineWord, datatypes.MachineWord) datatypes.MachineWord,
+  value datatypes.MachineWord) {
+	reg.Content = mapfunc(reg.Content, value)
+}
+
+func resolveAddressMode(s *Sim, opword datatypes.MachineWord, args []datatypes.MachineWord) (a datatypes.MachineWord, b datatypes.MachineWord) {
+	a = args[0]
+	hasb := len(args) > 1
+	if hasb {
+		b = args[1]
+	}
+	if isImmediate(opword) {
+		return a, 0 // no immediate binary instructions i believe
+	} else {
+		if isIndirectA(opword) {
+			a = s.mem.work[s.mem.work[a]]
+		}
+		if hasb && isIndirectB(opword) {
+			b = s.mem.work[s.mem.work[b]]
+		} else {
+			a = s.mem.work[a]
+			if hasb {
+				b = s.mem.work[b]
+			}
+		}
+		return a, b
+	}
 }
 
 func makeSim(memSize datatypes.MachineAddress) Sim {
+	instHandlers := map[string]InstHandler {
+		"add": func (s *Sim, args []datatypes.MachineWord) {
+			opword := args[0]
+			value, _ := resolveAddressMode(s, opword, args[1:])
+			mapRegisterUnary(s.isa.Registers["ACC"],
+				func (acc, val datatypes.MachineWord) datatypes.MachineWord {
+					return acc + val
+				},
+				value,
+			)
+		},
+		"sub": func (s *Sim, args []datatypes.MachineWord) {
+			opword := args[0]
+			value, _ := resolveAddressMode(s, opword, args[1:])
+			mapRegisterUnary(s.isa.Registers["ACC"],
+				func (acc, val datatypes.MachineWord) datatypes.MachineWord {
+					return acc - val
+				},
+				value,
+			)
+		},
+	}
+
+	isa := datatypes.GetDefaultISA()
+	mopHandlers := make(map[datatypes.MachineWord]InstHandler)
+	for name, handler := range instHandlers {
+		mopHandlers[isa.Instructions[name].Repr] = handler
+	}
+
 	return Sim {
 		mem: SimMem {
 			work: make([]datatypes.MachineWord, memSize),
-			registers: []Register {
-				Register {
-					name: "PC", desc: "Contador de Instruções (Program Counter)", size: 16,
-					longdesc: "Mantém o endereço da próxima instrução a ser executada",
-					tags: RegisterTagSpecial,
-				},
-				Register {
-					name: "SP", desc: "Ponteiro de pilha (Stack Pointer)", size: 16,
-					longdesc: "Aponta para o topo da pilha do sistema; tem incremento/decremento automático (push/pop)",
-					tags: RegisterTagSpecial,
-				},
-				Register {
-					name: "ACC", desc: "Acumulador", size: 16,
-					longdesc: "Armazena os dados (carregados e resultantes) das operações da Unid. de Lógica e Aritmética",
-					tags: RegisterTagGeneralPurpose | RegisterTagSpecial,
-				},
-				Register {
-					name: "MOP", desc: "Modo de Operação", size: 8,
-					longdesc: "Armazena o indicador do modo de operação, que é alterado apenas por painel de operação (via console de operação - interface visual)",
-					tags: RegisterTagSpecial,
-				},
-				Register {
-					name: "RI", desc: "Registrador de Instrução", size: 16,
-					longdesc: "Mantém o opcode da instrução em execução (registrador interno)",
-					tags: RegisterTagSpecial | RegisterTagInternal,
-				},
-				Register {
-					name: "RE", desc: "Registrador de Endereço de Memória", size: 16,
-					longdesc: "Mantém o endereço de acesso à memória de dados (registrador interno)",
-					tags: RegisterTagSpecial | RegisterTagInternal,
-				},
-				Register {
-					name: "R0", desc: "Registrador de Propósito Geral", size: 16,
-					longdesc: "Registrador de Propósito Geral",
-					tags: RegisterTagGeneralPurpose,
-				},
-				Register {
-					name: "R1", desc: "Registrador de Propósito Geral", size: 16,
-					longdesc: "Registrador de Propósito Geral",
-					tags: RegisterTagGeneralPurpose,
-				},
-			},
 		},
+		isa: isa,
+		handlers: mopHandlers,
 	}
 }
 
 func main() {
 	fmt.Print("uh")
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			log.Println(err)
+		}
+		line = strings.TrimSpace(line)
+		break
+	}
+	sim := makeSim(1<<12) // 4Kb for now
+	log.Printf("Simulation state: %#v", sim)
 }
