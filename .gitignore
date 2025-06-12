@@ -1,4 +1,5 @@
 # .gitignore
 
 tags
-assembler
+assembler/assembler
+simulator/simulator
