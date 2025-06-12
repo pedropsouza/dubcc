@@ -11,12 +11,9 @@ import (
 	"regexp"
 	"slices"
 	"bytes"
+	"dubcc/datatypes"
 )
 
-type (
-	MachineAddress = uint64
-	MachineWord = uint16
-)
 type DirectiveHandler struct {
 	f func(info *Info, line InLine)
 	numArgs int
@@ -25,10 +22,10 @@ type DirectiveHandler struct {
 type Info struct {
 	isa ISA
 	directives map[string]DirectiveHandler
-	symbols map[string]MachineAddress
+	symbols map[string]datatypes.MachineAddress
 	undefSyms UndefSymChain
-	output []MachineWord
-	line_counter MachineAddress
+	output []datatypes.MachineWord
+	line_counter datatypes.MachineAddress
 }
 
 type ISA struct {
@@ -37,25 +34,25 @@ type ISA struct {
 
 type Instruction struct {
 	numArgs int
-	repr MachineWord
+	repr datatypes.MachineWord
 }
 
 type UndefSymChainLink struct {
-	addr MachineAddress // address for the link data in the binary
-	prev MachineAddress // != 0 if this link is not the last for this symbol
-	from MachineAddress // address of the unresolved code pos
+	addr datatypes.MachineAddress // address for the link data in the binary
+	prev datatypes.MachineAddress // != 0 if this link is not the last for this symbol
+	from datatypes.MachineAddress // address of the unresolved code pos
 	sign byte   // FIXME: iunno what this one does
 	name string
 }
 
 type UndefSymChain struct {
 	links []UndefSymChainLink
-	top MachineAddress
-	base MachineAddress
+	top datatypes.MachineAddress
+	base datatypes.MachineAddress
 }
 
 func (usymchain *UndefSymChain) ChainSym(
-	from MachineAddress,
+	from datatypes.MachineAddress,
 	name string,
 ) *UndefSymChainLink {
 	var prevlink *UndefSymChainLink = nil
@@ -66,7 +63,7 @@ func (usymchain *UndefSymChain) ChainSym(
 		}
 	}
 	
-	prev := MachineAddress(0)
+	prev := datatypes.MachineAddress(0)
 	if prevlink != nil {
 		prev = prevlink.addr
 	}
@@ -130,7 +127,7 @@ type Repr struct {
 	tag ReprKind
 	input string
 	symbol string
-	out MachineWord
+	out datatypes.MachineWord
 }
 
 func (info *Info) firstPass(line InLine) (reprs []Repr, err error) {
@@ -163,7 +160,7 @@ func (info *Info) firstPass(line InLine) (reprs []Repr, err error) {
 		if err == nil {
 			r[index].tag = ReprComplete
 			r[index].symbol = arg
-			r[index].out = MachineWord(num) // will overflow, panic maybe?
+			r[index].out = datatypes.MachineWord(num) // will overflow, panic maybe?
 			continue
 		}
 		// aight it ain't a number
@@ -172,14 +169,14 @@ func (info *Info) firstPass(line InLine) (reprs []Repr, err error) {
 		if found {
 			r[index].tag = ReprComplete
 			r[index].symbol = arg
-			r[index].out = MachineWord(lookup)
+			r[index].out = datatypes.MachineWord(lookup)
 		} else {
 			// new link should be added
-			from := MachineAddress(len(info.output) + 1 + index)
+			from := datatypes.MachineAddress(len(info.output) + 1 + index)
 			newLink := info.undefSyms.ChainSym(from, arg)
 			r[index].tag = ReprPartial
 			r[index].symbol = arg
-			r[index].out = MachineWord(newLink.addr)
+			r[index].out = datatypes.MachineWord(newLink.addr)
 		}
 	}
 
@@ -187,7 +184,7 @@ func (info *Info) firstPass(line InLine) (reprs []Repr, err error) {
 		info.output = append(info.output, repr.out)
 	}
 
-	info.line_counter = MachineAddress(len(info.output))
+	info.line_counter = datatypes.MachineAddress(len(info.output))
 	
 	return r, nil
 }
@@ -217,7 +214,7 @@ func parseNum(in string) (num uint64, err error) {
 	return 0, errors.New("invalid number")
 }
 
-func (info *Info) registerConst(name string, val MachineWord) {
+func (info *Info) registerConst(name string, val datatypes.MachineWord) {
 	if name != "" {
 		info.symbols[name] = info.line_counter
 	}
@@ -269,12 +266,12 @@ func main() {
 					if err != nil {
 						log.Fatalf("can't decide value for const %v: %v", line.label, err)
 					}
-					info.registerConst(line.label, MachineWord(num))
+					info.registerConst(line.label, datatypes.MachineWord(num))
 				},
 				numArgs: 1,
 			},
 		},
-		symbols: make(map[string]MachineAddress),
+		symbols: make(map[string]datatypes.MachineAddress),
 	}
 	
 	for {
@@ -308,7 +305,7 @@ func main() {
 			if !found {
 				log.Fatalf("undefined symbol: %v (%#v)", link.name, link)
 			}
-			info.output[link.from] = MachineWord(sym)
+			info.output[link.from] = datatypes.MachineWord(sym)
 		}
 	}
 	fmt.Fprintf(os.Stderr, "%#v\n", info)

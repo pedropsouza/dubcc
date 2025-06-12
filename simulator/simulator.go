@@ -2,14 +2,7 @@ package main
 
 import (
 	"fmt"
-	"bufio"
-	"os"
-	"log"
-	"errors"
-	"strconv"
-	"strings"
-	"regexp"
-	"slices"
+	"dubcc/datatypes"
 )
 
 type Sim struct {
@@ -17,7 +10,7 @@ type Sim struct {
 }
 
 type SimMem struct {
-	work []MachineWord
+	work []datatypes.MachineWord
 	registers []Register
 }
 
@@ -34,20 +27,20 @@ type Register struct {
 	size uint
 	longdesc string
 	tags RegisterTag
-	content MachineWord
+	content datatypes.MachineWord
 }
 
-func makeSim(memSize MachineAddress) Sim {
+func makeSim(memSize datatypes.MachineAddress) Sim {
 	return Sim {
 		mem: SimMem {
-			work: make([]MachineWord, memSize),
+			work: make([]datatypes.MachineWord, memSize),
 			registers: []Register {
 				Register {
 					name: "PC", desc: "Contador de Instruções (Program Counter)", size: 16,
 					longdesc: "Mantém o endereço da próxima instrução a ser executada",
 					tags: RegisterTagSpecial,
 				},
-				Register: {
+				Register {
 					name: "SP", desc: "Ponteiro de pilha (Stack Pointer)", size: 16,
 					longdesc: "Aponta para o topo da pilha do sistema; tem incremento/decremento automático (push/pop)",
 					tags: RegisterTagSpecial,
@@ -64,7 +57,7 @@ func makeSim(memSize MachineAddress) Sim {
 				},
 				Register {
 					name: "RI", desc: "Registrador de Instrução", size: 16,
-					longdesc: "Mantém o opcode da instrução em execução (registrador interno)"
+					longdesc: "Mantém o opcode da instrução em execução (registrador interno)",
 					tags: RegisterTagSpecial | RegisterTagInternal,
 				},
 				Register {
@@ -85,4 +78,8 @@ func makeSim(memSize MachineAddress) Sim {
 			},
 		},
 	}
+}
+
+func main() {
+	fmt.Print("uh")
 }
