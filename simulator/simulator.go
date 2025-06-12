@@ -1,11 +1,10 @@
 package main
 
 import (
-	"fmt"
+	"io"
 	"bufio"
 	"log"
 	"os"
-	"strings"
 	"dubcc/datatypes"
 )
 
@@ -104,16 +103,54 @@ func makeSim(memSize datatypes.MachineAddress) Sim {
 }
 
 func main() {
-	fmt.Print("uh")
+	memCap := datatypes.MachineAddress(1<<5)
+	sim := makeSim(memCap) // 32b for now
+	log.Printf("loaded %d", memCap)
 	reader := bufio.NewReader(os.Stdin)
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			log.Println(err)
+
+	const (
+		Exec = iota
+		GetTwoArgs1
+		GetTwoArgs2
+		GetSingleArg
+		GetOp
+	)
+
+	state := GetOp
+	var inst datatypes.Instruction
+	args := make([]datatypes.MachineWord, 2)
+	buf := make([]byte, 2) // read one words worth at a time
+	var v datatypes.MachineWord
+	outer_loop: for {
+		for idx, _ := range buf {
+			readb, err := reader.ReadByte()
+			if err != nil {
+				if err == io.EOF {
+					break outer_loop
+				}
+				log.Fatal("error reading stdin: %v", err)
+			}
+			buf[idx] = readb
 		}
-		line = strings.TrimSpace(line)
-		break
+
+		v = datatypes.MachineWord(buf[1] << 8 + buf[0])
+		switch state {
+			case GetOp:
+				inst = sim.isa.MOT[v]
+				state = inst.NumArgs
+			case GetTwoArgs1:
+				state -= 1
+				args[0] = v
+			case GetTwoArgs2:
+				state -= 1
+				args[1] = v
+			case GetSingleArg:
+				state = Exec
+				args[0] = v
+			case Exec:
+				log.Printf("Executing %s with %v", inst.Name, args)
+				sim.handlers[inst.Repr](&sim, args)
+		}
 	}
-	sim := makeSim(1<<12) // 4Kb for now
 	log.Printf("Simulation state: %#v", sim)
 }

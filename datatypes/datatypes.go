@@ -8,9 +8,11 @@ type (
 type ISA struct {
 	Instructions map[string]Instruction
 	Registers map[string]*Register
+	MOT map[MachineWord]Instruction
 }
 
 type Instruction struct {
+	Name string
 	NumArgs int
 	Repr MachineWord
 }
@@ -38,23 +40,31 @@ type Register struct {
 }
 
 func GetDefaultISA () ISA {
+	insts := map[string]Instruction {
+		"add":   Instruction { Name: "add", NumArgs: 1, Repr: 2 },
+		"br":    Instruction { Name: "br", NumArgs: 1, Repr: 0 },
+		"brneg": Instruction { Name: "brneg", NumArgs: 1, Repr: 5 },
+		"brpos": Instruction { Name: "brpos", NumArgs: 1, Repr: 1 },
+		"brzero":Instruction { Name: "brzero", NumArgs: 1, Repr: 4 },
+		"copy":  Instruction { Name: "copy", NumArgs: 2, Repr: 13 },
+		"divide":Instruction { Name: "divide", NumArgs: 1, Repr: 10 },
+		"load":  Instruction { Name: "load", NumArgs: 1, Repr: 3 },
+		"mult":  Instruction { Name: "mult", NumArgs: 1, Repr: 14 },
+		"read":  Instruction { Name: "read", NumArgs: 1, Repr: 12 },
+		"stop":  Instruction { Name: "stop", NumArgs: 0, Repr: 11 },
+		"store": Instruction { Name: "store", NumArgs: 1, Repr: 7 },
+		"sub":   Instruction { Name: "sub", NumArgs: 1, Repr: 6 },
+		"write": Instruction { Name: "write", NumArgs: 1, Repr: 8 },
+	}
+
+	mot := make(map[MachineWord]Instruction)
+	for _, inst := range insts {
+		mot[inst.Repr] = inst
+	}
+
 	return ISA {
-		Instructions: map[string]Instruction {
-			"add":   Instruction { NumArgs: 1, Repr: 2 },
-			"br":    Instruction { NumArgs: 1, Repr: 0 },
-			"brneg": Instruction { NumArgs: 1, Repr: 5 },
-			"brpos": Instruction { NumArgs: 1, Repr: 1 },
-			"brzero":Instruction { NumArgs: 1, Repr: 4 },
-			"copy":  Instruction { NumArgs: 2, Repr: 13 },
-			"divide":Instruction { NumArgs: 1, Repr: 10 },
-			"load":  Instruction { NumArgs: 1, Repr: 3 },
-			"mult":  Instruction { NumArgs: 1, Repr: 14 },
-			"read":  Instruction { NumArgs: 1, Repr: 12 },
-			"stop":  Instruction { NumArgs: 0, Repr: 11 },
-			"store": Instruction { NumArgs: 1, Repr: 7 },
-			"sub":   Instruction { NumArgs: 1, Repr: 6 },
-			"write": Instruction { NumArgs: 1, Repr: 8 },
-		},
+		Instructions: insts,
+		MOT: mot,
 		Registers: map[string]*Register {
 			"PC": &Register {
 				Name: "PC", Desc: "Contador de Instruções (Program Counter)", Size: 16,
