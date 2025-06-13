@@ -186,6 +186,44 @@ func MakeSim(memSize MachineAddress) Sim {
 				value,
 			)
 		},
+		"br": func (s *Sim, args []MachineWord) {
+			opword := args[0]
+			value, _ := s.ResolveAddressMode(opword, args[1:])
+			s.Isa.Registers["PC"].MapUnary(
+				func (pc, target MachineWord) MachineWord {
+					return target
+				},
+				value,
+			)
+		},
+		"brpos": func (s *Sim, args []MachineWord) {
+			opword := args[0]
+			value, _ := s.ResolveAddressMode(opword, args[1:])
+			s.Isa.Registers["PC"].MapUnary(
+				func (pc, target MachineWord) MachineWord {
+					if (s.Isa.Registers["ACC"].Content & 0x8000) == 0 {
+						return target
+					} else {
+						return pc
+					}
+				},
+				value,
+			)
+		},
+		"brneg": func (s *Sim, args []MachineWord) {
+			opword := args[0]
+			value, _ := s.ResolveAddressMode(opword, args[1:])
+			s.Isa.Registers["PC"].MapUnary(
+				func (pc, target MachineWord) MachineWord {
+					if (s.Isa.Registers["ACC"].Content & 0x8000) > 0 {
+						return target
+					} else {
+						return pc
+					}
+				},
+				value,
+			)
+		},
 	}
 
 	isa := GetDefaultISA()
