@@ -301,6 +301,16 @@ func main() {
 			info.output[link.from] = datatypes.MachineWord(sym)
 		}
 	}
-	pp.Fprintf(os.Stderr, "%v\n", info)
-	pp.Print(info.output)
+	pp.Fprintf(os.Stderr, "Symbols: %v\n", info.symbols)
+
+	{ // write binary
+		writer := bufio.NewWriter(os.Stdout)
+		for _, u16 := range info.output {
+			high := byte((u16 >> 8) & 0xff)
+			low := byte((u16 >> 0) & 0xff)
+			writer.WriteByte(high)
+			writer.WriteByte(low)
+		}
+		writer.Flush()
+	}
 }
