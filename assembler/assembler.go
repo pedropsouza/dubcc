@@ -166,7 +166,7 @@ func (info *Info) firstPass(line InLine) (reprs []Repr, err error) {
 			r[index].out = datatypes.MachineWord(lookup)
 		} else {
 			// new link should be added
-			from := datatypes.MachineAddress(len(info.output) + 1 + index)
+			from := datatypes.MachineAddress(len(info.output) + index)
 			newLink := info.undefSyms.ChainSym(from, arg)
 			r[index].tag = ReprPartial
 			r[index].symbol = arg
@@ -177,7 +177,12 @@ func (info *Info) firstPass(line InLine) (reprs []Repr, err error) {
 		// signify indirect mode and implement it
 	}
 
+	if line.label != "" {
+		info.registerLabel(line.label)
+	}
+
 	for _, repr := range r {
+		pp.Fprintf(os.Stderr, "adding %v @ %v\n", repr.out, len(info.output))
 		info.output = append(info.output, repr.out)
 	}
 
@@ -209,6 +214,14 @@ func parseNum(in string) (num uint64, err error) {
 		}
 	}
 	return 0, errors.New("invalid number")
+}
+
+func (info *Info) registerLabelAt(name string, where datatypes.MachineAddress) {
+	info.symbols[name] = where
+}
+
+func (info *Info) registerLabel(name string) {
+	info.registerLabelAt(name, info.line_counter)
 }
 
 func (info *Info) registerConst(name string, val datatypes.MachineWord) {
