@@ -1,8 +1,11 @@
 module VirtualMachine
 
-go 1.24
+go 1.24.3
 
-require gioui.org v0.8.0
+require (
+	dubcc/datatypes v0.0.0-00010101000000-000000000000
+	gioui.org v0.8.0
+)
 
 require (
 	gioui.org/shader v1.0.8 // indirect
@@ -13,3 +16,5 @@ require (
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 )
+
+replace dubcc/datatypes => ../datatypes

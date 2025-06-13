@@ -41,7 +41,7 @@ func centerLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 		layout.Flexed(0.4, func(gtx layout.Context) layout.Dimensions {
 			colWeights := []float32{0.3, 0.3, 0.4}
 			return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return TextWithTable(gtx, th, "MEMÓRIA", white, &tableMemoryList, tableMemoryData, colWeights)
+				return TextWithTable(gtx, th, "MEMÓRIA", white, &tableMemory, colWeights)
 			})
 		}),
 		layout.Flexed(0.4, func(gtx layout.Context) layout.Dimensions {
@@ -59,7 +59,7 @@ func rightLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 	}.Layout(gtx,
 		layout.Flexed(0.9, func(gtx layout.Context) layout.Dimensions {
 			colWeights := []float32{0.5, 0.5}
-			return TextWithTable(gtx, th, "REGISTRADORES", white, &tableRegistersList, tableRegistersData, colWeights)
+			return TextWithTable(gtx, th, "REGISTRADORES", white, &tableRegisters, colWeights)
 		}),
 		layout.Flexed(0.1, func(gtx layout.Context) layout.Dimensions {
 			return ColorBox(gtx, gtx.Constraints.Max, red)

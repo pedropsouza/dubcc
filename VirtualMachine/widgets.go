@@ -6,7 +6,6 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"image"
 	"image/color"
@@ -26,7 +25,7 @@ func textLayout(gtx layout.Context, th *material.Theme, title string) layout.Dim
 	})
 }
 
-func TextWithTable(gtx layout.Context, th *material.Theme, title string, bg color.NRGBA, list *widget.List, table [][]string, colWeights []float32) layout.Dimensions {
+func TextWithTable(gtx layout.Context, th *material.Theme, title string, bg color.NRGBA, table *Table, colWeights []float32) layout.Dimensions {
 	inset := layout.Inset{Left: 8, Right: 8}
 	return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
@@ -36,7 +35,7 @@ func TextWithTable(gtx layout.Context, th *material.Theme, title string, bg colo
 			layout.Flexed(0.85, func(gtx layout.Context) layout.Dimensions {
 				ColorBox(gtx, gtx.Constraints.Max, bg)
 				return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-					return drawTable(gtx, th, list, table, colWeights)
+					return table.Draw(gtx, th, colWeights)
 				})
 			}),
 		)

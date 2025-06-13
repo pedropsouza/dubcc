@@ -13,6 +13,7 @@ import (
 var editor widget.Editor
 
 func main() {
+	InitTables()
 	go func() {
 		window := new(app.Window)
 		window.Option(app.Title("dobam unka bee compiler collection (speed racer)"))

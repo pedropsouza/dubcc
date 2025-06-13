@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"strconv"
+	"dubcc/datatypes"
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
@@ -10,41 +13,75 @@ import (
 	"gioui.org/widget/material"
 )
 
-var (
-	tableMemoryList    = widget.List{List: layout.List{Axis: layout.Vertical}}
-	tableRegistersList = widget.List{List: layout.List{Axis: layout.Vertical}}
-
-	tableMemoryData = [][]string{
-		{"Endereço", "Valor", "Binário"},
-		{"000", "42", "101010"},
-		{"001", "37", "100101"},
-		{"002", "99", "1100011"},
-		{"003", "12", "1100"},
-		{"004", "88", "1011000"},
-		{"000", "42", "101010"},
-		{"001", "37", "100101"},
-		{"002", "99", "1100011"},
-		{"003", "12", "1100"},
-		{"004", "88", "1011000"},
-		{"000", "42", "101010"},
-		{"001", "37", "100101"},
-		{"002", "99", "1100011"},
-		{"003", "12", "1100"},
-		{"004", "88", "1011000"},
+type (
+	Table struct {
+		widget widget.List
+		columns []ColumnEnum
+		data []TableEntry
 	}
 
-	tableRegistersData = [][]string{
-		{"registrador", "valor"},
-		{"r1", "0"}, {"r1", "0"}, {"r1", "0"},
-		{"r1", "0"}, {"r1", "0"}, {"r1", "0"},
-		{"r1", "0"}, {"r1", "0"}, {"r1", "0"},
-		{"r1", "0"}, {"r1", "0"}, {"r1", "0"},
-		{"r1", "0"}, {"r1", "0"}, {"r1", "0"},
-		{"r1", "0"}, {"r1", "0"}, {"r1", "0"},
-		{"r1", "0"}, {"r1", "0"}, {"r1", "0"},
-		{"r1", "0"}, {"r1", "0"}, {"r1", "0"},
-		{"r1", "0"}, {"r1", "0"}, {"r1", "0"},
-		{"r1", "0"}, {"r1", "0"}, {"r1", "0"},
+	RegisterTableEntry struct {
+		name string
+		reg *datatypes.Register
+	}
+	MemoryTableEntry struct {
+		address datatypes.MachineAddress
+		value datatypes.MachineWord
+	}
+	TableEntry interface {
+		GetColumn(ColumnEnum) string
+	}
+
+	ColumnEnum = byte
+)
+
+const (
+	ColumnName = iota
+	ColumnAddress
+	ColumnValue
+	ColumnBinaryValue
+	ColumnMax
+)
+
+func (e *MemoryTableEntry) GetColumn(col ColumnEnum) string {
+	switch col {
+	case ColumnAddress:
+		return strconv.FormatUint(uint64(e.address), 10)
+	case ColumnValue:
+		return strconv.FormatUint(uint64(e.value), 10)
+	case ColumnBinaryValue:
+		return fmt.Sprintf("%016b", e.value)
+	default: return "n/a"
+	}
+}
+
+func (e *RegisterTableEntry) GetColumn(col ColumnEnum) string {
+	switch col {
+	case ColumnName:
+		return e.name
+	case ColumnValue:
+		return strconv.FormatUint(uint64(e.reg.Content), 10)
+	case ColumnBinaryValue:
+		return fmt.Sprintf("%b", e.reg.Content)
+	default: return "n/a"
+	}
+}
+
+var (
+	tableMemory = Table {
+		widget: widget.List{List: layout.List{Axis: layout.Vertical}},
+		columns: []ColumnEnum { ColumnAddress, ColumnValue, ColumnBinaryValue },
+	}
+	tableRegisters = Table {
+		widget: widget.List{List: layout.List{Axis: layout.Vertical}},
+		columns: []ColumnEnum { ColumnName, ColumnValue },
+	}
+
+	tableColumnNames = map[ColumnEnum]string {
+		ColumnName: "Nome",
+		ColumnAddress: "Endereço",
+		ColumnValue: "Valor",
+		ColumnBinaryValue: "Binário",
 	}
 )
 
@@ -70,9 +107,8 @@ func drawCell(gtx layout.Context, th *material.Theme, text string, weight font.W
 	})
 }
 
-func drawTable(gtx layout.Context, th *material.Theme, list *widget.List, data [][]string, colWeights []float32) layout.Dimensions {
-	return material.List(th, list).Layout(gtx, len(data), func(gtx layout.Context, i int) layout.Dimensions {
-		row := data[i]
+func (tbl *Table) Draw(gtx layout.Context, th *material.Theme, colWeights []float32) layout.Dimensions {
+	return material.List(th, &tbl.widget).Layout(gtx, len(tbl.data), func(gtx layout.Context, i int) layout.Dimensions {
 		rowBg := white
 
 		if i > 0 && i%2 != 0 {
@@ -85,11 +121,18 @@ func drawTable(gtx layout.Context, th *material.Theme, list *widget.List, data [
 		paint.ColorOp{Color: rowBg}.Add(gtx.Ops)
 		paint.PaintOp{}.Add(gtx.Ops)
 
-		children := make([]layout.FlexChild, len(row))
-		for j, cellText := range row {
+		children := make([]layout.FlexChild, len(tbl.columns))
+
+		for j, col := range tbl.columns {
 			fontWeight := font.Normal
 			if i == 0 {
 				fontWeight = font.Bold
+			}
+			var cellText string
+			if i == 0 {
+				cellText = tableColumnNames[col]
+			} else {
+				cellText = tbl.data[i-1].GetColumn(col)
 			}
 			children[j] = layout.Flexed(colWeights[j], func(gtx layout.Context) layout.Dimensions {
 				return drawCell(gtx, th, cellText, fontWeight)
@@ -98,4 +141,19 @@ func drawTable(gtx layout.Context, th *material.Theme, list *widget.List, data [
 
 		return layout.Flex{Axis: layout.Horizontal}.Layout(gtx, children...)
 	})
+}
+
+func InitTables() {
+	for name, reg := range datatypes.GetDefaultISA().Registers {
+		tableRegisters.data = append(
+			tableRegisters.data,
+			&RegisterTableEntry { name, reg },
+		)
+	}
+	for idx, val := range []datatypes.MachineWord { 0, 1, 2, 3, 4, 5, 6, 7 } {
+		tableMemory.data = append(
+			tableMemory.data,
+			&MemoryTableEntry { datatypes.MachineAddress(idx), val },
+		)
+	}
 }
