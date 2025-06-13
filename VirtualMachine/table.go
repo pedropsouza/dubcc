@@ -108,7 +108,7 @@ func drawCell(gtx layout.Context, th *material.Theme, text string, weight font.W
 }
 
 func (tbl *Table) Draw(gtx layout.Context, th *material.Theme, colWeights []float32) layout.Dimensions {
-	return material.List(th, &tbl.widget).Layout(gtx, len(tbl.data), func(gtx layout.Context, i int) layout.Dimensions {
+	return material.List(th, &tbl.widget).Layout(gtx, len(tbl.data) + 1, func(gtx layout.Context, i int) layout.Dimensions {
 		rowBg := white
 
 		if i > 0 && i%2 != 0 {
@@ -143,14 +143,14 @@ func (tbl *Table) Draw(gtx layout.Context, th *material.Theme, colWeights []floa
 	})
 }
 
-func InitTables() {
-	for name, reg := range datatypes.GetDefaultISA().Registers {
+func InitTables(sim *datatypes.Sim) {
+	for name, reg := range sim.Isa.Registers {
 		tableRegisters.data = append(
 			tableRegisters.data,
 			&RegisterTableEntry { name, reg },
 		)
 	}
-	for idx, val := range []datatypes.MachineWord { 0, 1, 2, 3, 4, 5, 6, 7 } {
+	for idx, val := range sim.Mem.Work {
 		tableMemory.data = append(
 			tableMemory.data,
 			&MemoryTableEntry { datatypes.MachineAddress(idx), val },

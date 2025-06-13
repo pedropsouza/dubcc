@@ -1,6 +1,7 @@
 package main
 
 import (
+	"dubcc/datatypes"
 	"gioui.org/app"
 	"gioui.org/op"
 	"gioui.org/op/paint"
@@ -13,7 +14,9 @@ import (
 var editor widget.Editor
 
 func main() {
-	InitTables()
+	memCap := datatypes.MachineAddress(1 << 6)
+	sim := datatypes.MakeSim(memCap)
+	InitTables(&sim)
 	go func() {
 		window := new(app.Window)
 		window.Option(app.Title("dobam unka bee compiler collection (speed racer)"))

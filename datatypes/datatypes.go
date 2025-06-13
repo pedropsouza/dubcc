@@ -109,3 +109,96 @@ func GetDefaultISA () ISA {
 		},
 	}
 }
+
+type InstHandler func (*Sim, []MachineWord)
+
+type Sim struct {
+	Mem SimMem
+	Handlers map[MachineWord]InstHandler
+	Isa ISA
+}
+
+type SimMem struct {
+	Work []MachineWord
+}
+
+func IsImmediate(op MachineWord) bool {
+	return (op & InstImmediateFlag) != 0
+}
+
+func IsIndirectA(op MachineWord) bool {
+	return (op & InstIndirectAFlag) != 0
+}
+
+func IsIndirectB(op MachineWord) bool {
+	return (op & InstIndirectBFlag) != 0
+}
+
+func (reg *Register) MapUnary(
+	mapfunc func (MachineWord, MachineWord) MachineWord,
+  value MachineWord) {
+	reg.Content = mapfunc(reg.Content, value)
+}
+
+func (s *Sim) ResolveAddressMode(opword MachineWord, args []MachineWord) (a MachineWord, b MachineWord) {
+	a = args[0]
+	hasb := len(args) > 1
+	if hasb {
+		b = args[1]
+	}
+	if IsImmediate(opword) {
+		return a, 0 // no immediate binary instructions i believe
+	} else {
+		if IsIndirectA(opword) {
+			a = s.Mem.Work[s.Mem.Work[a]]
+		}
+		if hasb && IsIndirectB(opword) {
+			b = s.Mem.Work[s.Mem.Work[b]]
+		} else {
+			a = s.Mem.Work[a]
+			if hasb {
+				b = s.Mem.Work[b]
+			}
+		}
+		return a, b
+	}
+}
+
+func MakeSim(memSize MachineAddress) Sim {
+	instHandlers := map[string]InstHandler {
+		"add": func (s *Sim, args []MachineWord) {
+			opword := args[0]
+			value, _ := s.ResolveAddressMode(opword, args[1:])
+			s.Isa.Registers["ACC"].MapUnary(
+				func (acc, val MachineWord) MachineWord {
+					return acc + val
+				},
+				value,
+			)
+		},
+		"sub": func (s *Sim, args []MachineWord) {
+			opword := args[0]
+			value, _ := s.ResolveAddressMode(opword, args[1:])
+			s.Isa.Registers["ACC"].MapUnary(
+				func (acc, val MachineWord) MachineWord {
+					return acc - val
+				},
+				value,
+			)
+		},
+	}
+
+	isa := GetDefaultISA()
+	mopHandlers := make(map[MachineWord]InstHandler)
+	for name, handler := range instHandlers {
+		mopHandlers[isa.Instructions[name].Repr] = handler
+	}
+
+	return Sim {
+		Mem: SimMem {
+			Work: make([]MachineWord, memSize),
+		},
+		Isa: isa,
+		Handlers: mopHandlers,
+	}
+}
