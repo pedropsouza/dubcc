@@ -1,6 +1,7 @@
 package main
 
 import (
+	"dubcc/datatypes"
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/unit"
@@ -91,6 +92,9 @@ func centerLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 								return
 							}
 							log.Print(data)
+							for idx, val := range data {
+								sim.Mem.Work[idx] = datatypes.MachineWord(val)
+							}
 						}()
 					}
 					return btn.Layout(gtx)

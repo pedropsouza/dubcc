@@ -14,9 +14,12 @@ import (
 var editor widget.Editor
 var assembleBtn widget.Clickable
 
+var memCap datatypes.MachineAddress 
+var sim datatypes.Sim
+
 func main() {
-	memCap := datatypes.MachineAddress(1 << 6)
-	sim := datatypes.MakeSim(memCap)
+	memCap = datatypes.MachineAddress(1 << 6)
+	sim = datatypes.MakeSim(memCap)
 	InitTables(&sim)
 	pathEnv := os.Getenv("PATH")
 	os.Setenv("PATH", pathEnv+":"+os.Getenv("PWD")+"/assembler/")

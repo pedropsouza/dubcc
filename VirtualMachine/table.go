@@ -26,7 +26,6 @@ type (
 	}
 	MemoryTableEntry struct {
 		address datatypes.MachineAddress
-		value datatypes.MachineWord
 	}
 	TableEntry interface {
 		GetColumn(ColumnEnum) string
@@ -48,9 +47,9 @@ func (e *MemoryTableEntry) GetColumn(col ColumnEnum) string {
 	case ColumnAddress:
 		return strconv.FormatUint(uint64(e.address), 10)
 	case ColumnValue:
-		return strconv.FormatUint(uint64(e.value), 10)
+		return strconv.FormatUint(uint64(sim.Mem.Work[e.address]), 10)
 	case ColumnBinaryValue:
-		return fmt.Sprintf("%016b", e.value)
+		return fmt.Sprintf("%016b", sim.Mem.Work[e.address])
 	default: return "n/a"
 	}
 }
@@ -150,10 +149,10 @@ func InitTables(sim *datatypes.Sim) {
 			&RegisterTableEntry { name, reg },
 		)
 	}
-	for idx, val := range sim.Mem.Work {
+	for idx := range sim.Mem.Work {
 		tableMemory.data = append(
 			tableMemory.data,
-			&MemoryTableEntry { datatypes.MachineAddress(idx), val },
+			&MemoryTableEntry { datatypes.MachineAddress(idx) },
 		)
 	}
 }
