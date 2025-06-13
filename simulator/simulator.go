@@ -6,7 +6,10 @@ import (
 	"bufio"
 	"log"
 	"os"
+	"os/signal"
+	"time"
 	"dubcc/datatypes"
+	"github.com/k0kubun/pp/v3"
 )
 
 func instructionFromWord(
@@ -26,64 +29,63 @@ func main() {
 	log.Printf("loaded %d", memCap)
 	reader := bufio.NewReader(os.Stdin)
 
-	const (
-		Exec = iota
-		GetTwoArgs1
-		GetTwoArgs2
-		GetSingleArg
-		GetOp
-	)
+	var stop_requested bool = false
 
-	state := GetOp
-	var instWord datatypes.MachineWord
-	var inst datatypes.Instruction
-	args := make([]datatypes.MachineWord, 2)
-	buf := make([]byte, 2) // read one words worth at a time
-	var v datatypes.MachineWord
-	outer_loop: for {
-		if (state != Exec) {
-			for idx, _ := range buf {
+	{ // install interrupt handler
+		c := make (chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		go func() {
+			for _ = range c {
+				stop_requested = true
+			}
+		}()
+	}
+
+	{ // read bin to memory
+		buf := make([]byte, 2) // read one words worth at a time
+		read_file: for mempos := range sim.Mem.Work {
+			for idx := range buf {
 				readb, err := reader.ReadByte()
 				if err != nil {
 					if err == io.EOF {
-						break outer_loop
+						break read_file
 					}
 					log.Fatal("error reading stdin: %v", err)
 				}
 				buf[idx] = readb
 			}
-			v = datatypes.MachineWord(buf[0] << 8 + buf[1])
+			v := datatypes.MachineWord(buf[0] << 8 + buf[1])
 			fmt.Fprintf(os.Stderr, "got word %x (%d) out of %v\n", v, v, buf)
-		}
-
-		switch state {
-			case GetOp:
-				instWord = v
-				inst_, ifound := instructionFromWord(&sim, instWord)
-				if !ifound {
-					fmt.Fprintf(os.Stderr,
-						"invalid instruction %x (%d)\n", instWord, instWord,
-					)
-				}
-				inst = inst_
-				state = inst.NumArgs
-			case GetTwoArgs1:
-				state -= 1
-				args[0] = v
-			case GetTwoArgs2:
-				state -= 1
-				args[1] = v
-			case GetSingleArg:
-				state = Exec
-				args[0] = v
-			case Exec:
-				log.Printf("Executing %s with %v", inst.Name, args)
-				inst, hfound := sim.Handlers[inst.Repr]
-				if !hfound {
-					fmt.Fprintf(os.Stderr, "couldn't handle instruction %v\n", inst)
-				}
-				state = GetOp
+			sim.Mem.Work[mempos] = v
 		}
 	}
-	log.Printf("Simulation state: %#v", sim)
+
+	var instWord datatypes.MachineWord
+	for {
+		if stop_requested {
+			break
+		}
+		pc := sim.Isa.Registers["PC"]
+		instWord = sim.Mem.Work[pc.Content]
+		inst, ifound := instructionFromWord(&sim, instWord)
+		if !ifound {
+			fmt.Fprintf(os.Stderr,
+				"invalid instruction %x (%d)\n", instWord, instWord,
+			)
+		}
+		handler, hfound := sim.Handlers[inst.Repr]
+		if !hfound {
+			fmt.Fprintf(os.Stderr, "couldn't handle instruction %v\n", inst)
+		}
+		instPos := datatypes.MachineAddress(pc.Content)
+		argsTerm := instPos + 1 + datatypes.MachineAddress(inst.NumArgs)
+		// set pc before calling the handler
+		// that way branching works
+		pc.Content += datatypes.MachineWord(1 + inst.NumArgs)
+		args := sim.Mem.Work[instPos:argsTerm]
+		log.Printf("Executing %s with %v", inst.Name, args)
+		handler(&sim, args)
+		time.Sleep(100 * time.Millisecond)
+	}
+	pp.Printf("Simulation state: %v", sim)
 }

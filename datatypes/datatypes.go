@@ -188,6 +188,10 @@ func MakeSim(memSize MachineAddress) Sim {
 		},
 		"br": func (s *Sim, args []MachineWord) {
 			opword := args[0]
+			// if not indirect, must be treated as immediate else labels break
+			if !(IsIndirectA(opword) || IsIndirectB(opword)) {
+				opword |= InstImmediateFlag
+			}
 			value, _ := s.ResolveAddressMode(opword, args[1:])
 			s.Isa.Registers["PC"].MapUnary(
 				func (pc, target MachineWord) MachineWord {
@@ -198,10 +202,15 @@ func MakeSim(memSize MachineAddress) Sim {
 		},
 		"brpos": func (s *Sim, args []MachineWord) {
 			opword := args[0]
+			// if not indirect, must be treated as immediate else labels break
+			if !(IsIndirectA(opword) || IsIndirectB(opword)) {
+				opword |= InstImmediateFlag
+			}
 			value, _ := s.ResolveAddressMode(opword, args[1:])
 			s.Isa.Registers["PC"].MapUnary(
 				func (pc, target MachineWord) MachineWord {
-					if (s.Isa.Registers["ACC"].Content & 0x8000) == 0 {
+					acc_v := s.Isa.Registers["ACC"].Content
+					if acc_v != 0 && (acc_v & 0x8000) == 0 {
 						return target
 					} else {
 						return pc
@@ -212,6 +221,10 @@ func MakeSim(memSize MachineAddress) Sim {
 		},
 		"brneg": func (s *Sim, args []MachineWord) {
 			opword := args[0]
+			// if not indirect, must be treated as immediate else labels break
+			if !(IsIndirectA(opword) || IsIndirectB(opword)) {
+				opword |= InstImmediateFlag
+			}
 			value, _ := s.ResolveAddressMode(opword, args[1:])
 			s.Isa.Registers["PC"].MapUnary(
 				func (pc, target MachineWord) MachineWord {
