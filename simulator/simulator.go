@@ -29,14 +29,12 @@ func main() {
 	log.Printf("loaded %d", memCap)
 	reader := bufio.NewReader(os.Stdin)
 
-	var stop_requested bool = false
-
 	{ // install interrupt handler
 		c := make (chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt)
 		go func() {
 			for _ = range c {
-				stop_requested = true
+				sim.State = datatypes.SimStateHalt
 			}
 		}()
 	}
@@ -60,17 +58,19 @@ func main() {
 		}
 	}
 
-	var instWord datatypes.MachineWord
+	sim.State = datatypes.SimStateRun
 	for {
-		if stop_requested {
+		if sim.State != datatypes.SimStateRun {
 			break
 		}
 		pc := sim.Isa.Registers["PC"]
-		instWord = sim.Mem.Work[pc.Content]
-		inst, ifound := instructionFromWord(&sim, instWord)
+		ri := sim.Isa.Registers["RI"]
+		//re := sim.Isa.Registers["RE"]
+		ri.Content = sim.Mem.Work[pc.Content]
+		inst, ifound := instructionFromWord(&sim, ri.Content)
 		if !ifound {
 			fmt.Fprintf(os.Stderr,
-				"invalid instruction %x (%d)\n", instWord, instWord,
+				"invalid instruction %x (%d)\n", ri.Content, ri.Content,
 			)
 		}
 		handler, hfound := sim.Handlers[inst.Repr]

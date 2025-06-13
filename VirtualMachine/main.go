@@ -12,11 +12,15 @@ import (
 )
 
 var editor widget.Editor
+var assembleBtn widget.Clickable
 
 func main() {
 	memCap := datatypes.MachineAddress(1 << 6)
 	sim := datatypes.MakeSim(memCap)
 	InitTables(&sim)
+	pathEnv := os.Getenv("PATH")
+	os.Setenv("PATH", pathEnv+":"+os.Getenv("PWD")+"/assembler/")
+	log.Print(os.Getenv("PATH"))
 	go func() {
 		window := new(app.Window)
 		window.Option(app.Title("dobam unka bee compiler collection (speed racer)"))

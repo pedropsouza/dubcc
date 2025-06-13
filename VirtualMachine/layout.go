@@ -6,6 +6,10 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget/material"
 	"image/color"
+	"io"
+	"log"
+	"os/exec"
+	"strings"
 )
 
 var (
@@ -35,6 +39,7 @@ func mainLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 }
 
 func centerLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
+	btn := material.Button(th, &assembleBtn, "Assemble")
 	return layout.Flex{
 		Axis: layout.Vertical,
 	}.Layout(gtx,
@@ -49,6 +54,48 @@ func centerLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 		}),
 		layout.Flexed(0.2, func(gtx layout.Context) layout.Dimensions {
 			return ColorBox(gtx, gtx.Constraints.Max, red)
+		}),
+		layout.Flexed(0.1, func(gtx layout.Context) layout.Dimensions {
+			return layout.Flex {
+				Axis: layout.Horizontal,
+			}.Layout(gtx,
+				layout.Flexed(0.2, func(gtx layout.Context) layout.Dimensions {
+					if assembleBtn.Clicked(gtx) {
+						go func() {
+							cmd := exec.Command("assembler")
+							if cmd.Err != nil {
+								log.Print(cmd.Err)
+								return
+							}
+
+							cmd.Stdin = strings.NewReader(editor.Text())
+							stdout, outerr := cmd.StdoutPipe()
+							if outerr != nil {
+								log.Print(outerr)
+							}
+
+							go func() {
+								err := cmd.Start()
+								if err != nil {
+									log.Print(err)
+								}
+								err = cmd.Wait()
+								if err != nil {
+									log.Print(err)
+								}
+							}()
+
+							data, rerr := io.ReadAll(stdout)
+							if rerr != nil {
+								log.Print(rerr)
+								return
+							}
+							log.Print(data)
+						}()
+					}
+					return btn.Layout(gtx)
+				}),
+			)
 		}),
 	)
 }
