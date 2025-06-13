@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"bufio"
 	"os"
 	"log"
@@ -12,6 +11,7 @@ import (
 	"slices"
 	"bytes"
 	"dubcc/datatypes"
+	"github.com/k0kubun/pp/v3"
 )
 
 type DirectiveHandler struct {
@@ -265,7 +265,7 @@ func main() {
 
 		{
 			parsedline, err := parseAsmLine(line)
-			fmt.Fprintf(os.Stderr, "processing %#v... ", parsedline)
+			pp.Fprintf(os.Stderr, "processing %v... ", parsedline)
 			if err != nil {
 				log.Println(err)
 				continue
@@ -275,7 +275,7 @@ func main() {
 			if err != nil {
 				log.Println(err)
 			}
-			fmt.Fprintf(os.Stderr, "%#v\n", outLine)
+			pp.Fprintf(os.Stderr, "%v\n", outLine)
 		}
 	}
 
@@ -283,11 +283,11 @@ func main() {
 		for _, link := range info.undefSyms.links {
 			sym, found := info.symbols[link.name]
 			if !found {
-				log.Fatalf("undefined symbol: %v (%#v)", link.name, link)
+				log.Fatalf("undefined symbol: %v (%v)", link.name, link)
 			}
 			info.output[link.from] = datatypes.MachineWord(sym)
 		}
 	}
-	fmt.Fprintf(os.Stderr, "%#v\n", info)
-	fmt.Print(info.output)
+	pp.Fprintf(os.Stderr, "%v\n", info)
+	pp.Print(info.output)
 }
