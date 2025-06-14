@@ -110,6 +110,16 @@ func GetDefaultISA () ISA {
 	}
 }
 
+func (isa *ISA) InstructionFromWord(
+	word MachineWord,
+) (Instruction, bool) {
+	word &= ^uint16(InstImmediateFlag)
+	word &= ^uint16(InstIndirectAFlag)
+	word &= ^uint16(InstIndirectBFlag)
+	inst, found := isa.MOT[word]
+	return inst, found
+}
+
 type InstHandler func (*Sim, []MachineWord)
 
 type Sim struct {
@@ -266,7 +276,11 @@ func MakeSim(memSize MachineAddress) Sim {
 		"stop": func (s *Sim, args []MachineWord) {
 			s.State = SimStateHalt
 		},
-		//"copy": how the hell do we address registers?
+		"copy": func (s *Sim, args []MachineWord) {
+			opword := args[0]
+			a := args[1]
+			b := args[2]
+		},
 		"push": func (s *Sim, args []MachineWord) {
 
 		},

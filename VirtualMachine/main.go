@@ -9,10 +9,13 @@ import (
 	"gioui.org/widget/material"
 	"log"
 	"os"
+	"fmt"
+	"path"
 )
 
 var editor widget.Editor
 var assembleBtn widget.Clickable
+var stepBtn widget.Clickable
 
 var memCap datatypes.MachineAddress 
 var sim datatypes.Sim
@@ -21,8 +24,14 @@ func main() {
 	memCap = datatypes.MachineAddress(1 << 6)
 	sim = datatypes.MakeSim(memCap)
 	InitTables(&sim)
+	execPath, err := os.Executable()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Print(execPath)
 	pathEnv := os.Getenv("PATH")
-	os.Setenv("PATH", pathEnv+":"+os.Getenv("PWD")+"/assembler/")
+	assemblerDir := path.Join(path.Dir(path.Dir(execPath)), "assembler")
+	os.Setenv("PATH", pathEnv+":"+assemblerDir)
 	log.Print(os.Getenv("PATH"))
 	go func() {
 		window := new(app.Window)

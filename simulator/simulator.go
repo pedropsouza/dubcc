@@ -12,17 +12,6 @@ import (
 	"github.com/k0kubun/pp/v3"
 )
 
-func instructionFromWord(
-	s *datatypes.Sim,
-	word datatypes.MachineWord,
-) (datatypes.Instruction, bool) {
-	word &= ^uint16(datatypes.InstImmediateFlag)
-	word &= ^uint16(datatypes.InstIndirectAFlag)
-	word &= ^uint16(datatypes.InstIndirectBFlag)
-	inst, found := s.Isa.MOT[word]
-	return inst, found
-}
-
 func main() {
 	memCap := datatypes.MachineAddress(1<<5)
 	sim := datatypes.MakeSim(memCap) // 32b for now
@@ -67,7 +56,7 @@ func main() {
 		ri := sim.Isa.Registers["RI"]
 		//re := sim.Isa.Registers["RE"]
 		ri.Content = sim.Mem.Work[pc.Content]
-		inst, ifound := instructionFromWord(&sim, ri.Content)
+		inst, ifound := sim.Isa.InstructionFromWord(ri.Content)
 		if !ifound {
 			fmt.Fprintf(os.Stderr,
 				"invalid instruction %x (%d)\n", ri.Content, ri.Content,
