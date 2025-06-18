@@ -55,13 +55,14 @@ func (e *MemoryTableEntry) GetColumn(col ColumnEnum) string {
 }
 
 func (e *RegisterTableEntry) GetColumn(col ColumnEnum) string {
+	val := sim.GetRegister(e.reg.Address)
 	switch col {
 	case ColumnName:
 		return e.name
 	case ColumnValue:
-		return strconv.FormatUint(uint64(e.reg.Content), 10)
+		return strconv.FormatUint(uint64(val), 10)
 	case ColumnBinaryValue:
-		return fmt.Sprintf("%b", e.reg.Content)
+		return fmt.Sprintf("%b", val)
 	default: return "n/a"
 	}
 }

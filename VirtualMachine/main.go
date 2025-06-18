@@ -23,6 +23,7 @@ var sim datatypes.Sim
 func main() {
 	memCap = datatypes.MachineAddress(1 << 6)
 	sim = datatypes.MakeSim(memCap)
+	fmt.Println(sim)
 	InitTables(&sim)
 	execPath, err := os.Executable()
 	if err != nil {
