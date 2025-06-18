@@ -17,11 +17,25 @@ type Instruction struct {
 	Repr    MachineWord
 }
 
+const {
+	InstFlagImmediate = 1 << iota // Accepts Immediate values
+	InstFlagImmediateB
+	InstFlagStack
+}
+
+type InstructionFlag byte
 const (
 	InstIndirectAFlag = (1 << 5) << iota
 	InstIndirectBFlag
 	InstImmediateFlag
 )
+
+type Instruction struct {
+	Name string
+	NumArgs int
+	Repr MachineWord
+	Flags InstructionFlag
+}
 
 type RegisterTag byte
 
@@ -40,22 +54,23 @@ type Register struct {
 	Content  MachineWord
 }
 
-func GetDefaultISA() ISA {
-	insts := map[string]Instruction{
-		"add":    Instruction{Name: "add", NumArgs: 1, Repr: 2},
-		"br":     Instruction{Name: "br", NumArgs: 1, Repr: 0},
-		"brneg":  Instruction{Name: "brneg", NumArgs: 1, Repr: 5},
-		"brpos":  Instruction{Name: "brpos", NumArgs: 1, Repr: 1},
-		"brzero": Instruction{Name: "brzero", NumArgs: 1, Repr: 4},
-		"copy":   Instruction{Name: "copy", NumArgs: 2, Repr: 13},
-		"divide": Instruction{Name: "divide", NumArgs: 1, Repr: 10},
-		"load":   Instruction{Name: "load", NumArgs: 1, Repr: 3},
-		"mult":   Instruction{Name: "mult", NumArgs: 1, Repr: 14},
-		"read":   Instruction{Name: "read", NumArgs: 1, Repr: 12},
-		"stop":   Instruction{Name: "stop", NumArgs: 0, Repr: 11},
-		"store":  Instruction{Name: "store", NumArgs: 1, Repr: 7},
-		"sub":    Instruction{Name: "sub", NumArgs: 1, Repr: 6},
-		"write":  Instruction{Name: "write", NumArgs: 1, Repr: 8},
+func GetDefaultISA () ISA {
+	insts := map[string]Instruction {
+		"add":   Instruction { Name: "add", NumArgs: 1, Repr: 2, Flags: InstFlagImmediate },
+		"br":    Instruction { Name: "br", NumArgs: 1, Repr: 0, Flags: 0 },
+		"brneg": Instruction { Name: "brneg", NumArgs: 1, Repr: 5, Flags: 0 },
+		"brpos": Instruction { Name: "brpos", NumArgs: 1, Repr: 1, Flags: 0 },
+		"brzero":Instruction { Name: "brzero", NumArgs: 1, Repr: 4, Flags: 0 },
+		"copy":  Instruction { Name: "copy", NumArgs: 2, Repr: 13, Flags: InstFlagImmediateB },
+		"divide":Instruction { Name: "divide", NumArgs: 1, Repr: 10, Flags: InstFlagImmediate },
+		"load":  Instruction { Name: "load", NumArgs: 1, Repr: 3, Flags: InstFlagImmediate },
+		"mult":  Instruction { Name: "mult", NumArgs: 1, Repr: 14, Flags: InstFlagImmediate },
+		"read":  Instruction { Name: "read", NumArgs: 1, Repr: 12, Flags: 0 },
+		"ret":   Instruction { Name: "ret", NumArgs: 0, Repr: 16, Flags: InstFlagStack }
+		"stop":  Instruction { Name: "stop", NumArgs: 0, Repr: 11, Flags: 0 },
+		"store": Instruction { Name: "store", NumArgs: 1, Repr: 7, Flags: 0 },
+		"sub":   Instruction { Name: "sub", NumArgs: 1, Repr: 6, Flags: InstFlagImmediate },
+		"write": Instruction { Name: "write", NumArgs: 1, Repr: 8, Flags: InstFlagImmediate },
 	}
 
 	mot := make(map[MachineWord]Instruction)
@@ -328,11 +343,11 @@ func MakeSim(memSize MachineAddress) Sim {
 		mopHandlers[isa.Instructions[name].Repr] = handler
 	}
 
-	return Sim{
-		Mem: SimMem{
+	return Sim {
+		Mem: SimMem {
 			Work: make([]MachineWord, memSize),
 		},
-		Isa:      isa,
+		Isa: isa,
 		Handlers: mopHandlers,
 	}
 }
