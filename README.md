@@ -5,34 +5,36 @@
 ### Descrição
 
 Trabalho realizado na disciplina de Programação de Sistemas na Universidade Federal de Pelotas no semestre 2025/1. Este trabalho consiste em desenvolver do zero uma computador hipotético, seguindo o livro do Calingaert, com poucas alterações. O trabalho possui interface gráfica pŕopria, além do executor (emulador). Este projeto foi desenvolvido na linguagem Go, como foi definido em aula.
-Trabalho Programação de Sistemas 2025/1 UFPel
 
 <img src="dubcc.png" alt="Placeholder">
 
 > Trabalho em desenvolvimento...
 
-## 🏆️Progresso
+## 🏆️ Progresso
 - [x] Máquina Virtual
 - [x] Montador
 - [ ] Processador de Macros
 - [ ] Carregador
 - [ ] Ligador
 
-## 💻Pré-requisitos
+## 💻 Pré-requisitos
 
 Para testar o programa desenvolvido, certifique-se que possua:
 
-- Linguagem Go
+- Linguagem Go <img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" />
 - Sistema operacional Windows ou Linux
 
+### 💻 Executando
+Placeholder
 
-### 🤝Membros do Grupo
+### 🤝 Membros do Grupo
 Líder
 - Pedro Porto Souza
 
 Vice-Líder
-- Stephan Heidmann
+- Stephan Heidmann <img src="https://img.shields.io/badge/Instagram-E4405F?style=for-the-badge&logo=instagram&logoColor=white" /> heidmannstephan
 
+Membros
 - Rafael Caetano
 - Kevin Rehbein
 - Marlon Weber
