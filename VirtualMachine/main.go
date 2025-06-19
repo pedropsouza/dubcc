@@ -2,6 +2,7 @@ package main
 
 import (
 	"dubcc/datatypes"
+	"fmt"
 	"gioui.org/app"
 	"gioui.org/op"
 	"gioui.org/op/paint"
@@ -9,7 +10,6 @@ import (
 	"gioui.org/widget/material"
 	"log"
 	"os"
-	"fmt"
 	"path"
 )
 
@@ -17,7 +17,7 @@ var editor widget.Editor
 var assembleBtn widget.Clickable
 var stepBtn widget.Clickable
 
-var memCap datatypes.MachineAddress 
+var memCap datatypes.MachineAddress
 var sim datatypes.Sim
 
 func main() {
