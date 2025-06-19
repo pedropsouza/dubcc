@@ -42,8 +42,15 @@ type SimMem struct {
 
 func (s *Sim) ResolveAddressMode(opword MachineWord, args []MachineWord) (a MachineWord, b MachineWord) {
 	a = args[0]
-	hasb := len(args) > 1
+	inst, found := s.InstructionFromWord(opword)
+	if !found {
+		panic("bad instruction")
+	}
+	hasb := inst.NumArgs > 1
 	if hasb {
+		if len(args) < 2 {
+			panic("bad args count")
+		}
 		b = args[1]
 	}
 	if IsImmediate(opword) {
@@ -55,9 +62,19 @@ func (s *Sim) ResolveAddressMode(opword MachineWord, args []MachineWord) (a Mach
 		if hasb && IsIndirectB(opword) {
 			b = s.Mem.Work[s.Mem.Work[b]]
 		} else {
-			a = s.Mem.Work[a]
+			if (inst.Flags & InstFlagImmediate) != 0 {
+				// this instruction accepts immediates,
+				// but the actual opword is not marked as immediate
+				// therefore it must be directly resolved
+				a = s.Mem.Work[a]
+			}
 			if hasb {
-				b = s.Mem.Work[b]
+				if (inst.Flags & InstFlagImmediateB) != 0 {
+					// this instruction accepts 2nd pos immediates,
+					// but the actual opword is not marked as 2nd pos immediate
+					// therefore it must be directly resolved
+					b = s.Mem.Work[b]
+				}
 			}
 		}
 		return a, b

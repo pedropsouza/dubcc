@@ -93,17 +93,23 @@ type InLine struct {
 	args []string
 }
 
+var emptyLineErr = errors.New("empty line")
+
 func parseAsmLine(rawLine string) (line InLine, err error) {
 	label, code, labeled := strings.Cut(rawLine, ":")
 	if !labeled {
 		code = label
+		label = ""
 	}
 	fields := strings.Fields(code)
+	if len(fields) < 1 {
+		return InLine {}, emptyLineErr
+	}
 	return InLine {
 		raw: rawLine,
 		label: label,
 		op: fields[0],
-		args: fields[1:],
+		args: fields[min(len(fields), 1):],
 	}, nil
 }
 
@@ -275,7 +281,9 @@ func main() {
 			parsedline, err := parseAsmLine(line)
 			pp.Fprintf(os.Stderr, "processing %v... ", parsedline)
 			if err != nil {
-				log.Println(err)
+				if err != emptyLineErr {
+					log.Println(err)
+				}
 				continue
 			}
 			outLine, err := info.firstPass(parsedline)

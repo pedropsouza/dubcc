@@ -9,8 +9,6 @@ import (
 	"image/color"
 	"io"
 	"log"
-	"os"
-	"fmt"
 	"os/exec"
 	"strings"
 	"bytes"
@@ -116,7 +114,7 @@ func centerLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 										buf[idx] = readb
 									}
 									v := datatypes.MachineWord(buf[0] << 8 + buf[1])
-									fmt.Fprintf(os.Stderr, "got word %x (%d) out of %v\n", v, v, buf)
+									log.Printf("got word %x (%d) out of %v\n", v, v, buf)
 									sim.Mem.Work[memPos] = v
 								}
 							}
@@ -133,27 +131,26 @@ func centerLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 						sim.SetRegister(datatypes.RegRI, instWord)
 						inst, ifound := sim.InstructionFromWord(instWord)
 						if !ifound {
-							fmt.Fprintf(os.Stderr,
-								"invalid instruction %x (%d)\n", instWord, instWord,
+							log.Printf("invalid instruction %x (%d)\n", instWord, instWord)
+						} else {
+							handler, hfound := sim.Handlers[inst.Repr]
+							if !hfound {
+								log.Printf("couldn't handle instruction %v\n", inst)
+							}
+							instPos := datatypes.MachineAddress(pc)
+							argsTerm := instPos + 1 + datatypes.MachineAddress(inst.NumArgs)
+							// set pc before calling the handler
+							// that way branching works
+							sim.MapRegister(
+								datatypes.RegPC,
+								func (pc datatypes.MachineWord) datatypes.MachineWord {
+									return pc + datatypes.MachineWord(1 + inst.NumArgs)
+								},
 							)
+							args := sim.Mem.Work[instPos:argsTerm]
+							log.Printf("Executing %s with %v", inst.Name, args)
+							handler(&sim, args)
 						}
-						handler, hfound := sim.Handlers[inst.Repr]
-						if !hfound {
-							fmt.Fprintf(os.Stderr, "couldn't handle instruction %v\n", inst)
-						}
-						instPos := datatypes.MachineAddress(pc)
-						argsTerm := instPos + 1 + datatypes.MachineAddress(inst.NumArgs)
-						// set pc before calling the handler
-						// that way branching works
-						sim.MapRegister(
-							datatypes.RegPC,
-							func (pc datatypes.MachineWord) datatypes.MachineWord {
-								return pc + datatypes.MachineWord(1 + inst.NumArgs)
-							},
-						)
-						args := sim.Mem.Work[instPos:argsTerm]
-						log.Printf("Executing %s with %v", inst.Name, args)
-						handler(&sim, args)
 					}
 					return stepBtnView.Layout(gtx)
 				}),
