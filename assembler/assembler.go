@@ -233,7 +233,7 @@ func (info *Info) registerConst(name string, val datatypes.MachineWord) {
 }
 
 func main() {
-	reader := bufio.NewReader(os.Stdin)
+	scanner := bufio.NewScanner(os.Stdin)
 
 	if len(os.Args) == 2 {
 		inputFile, err := os.ReadFile(os.Args[1])
@@ -241,7 +241,7 @@ func main() {
 			log.Println(err)
 		}
 		r := bytes.NewReader(inputFile)
-		reader = bufio.NewReader(r)
+		scanner = bufio.NewScanner(r)
 	}
 
 	info := Info {
@@ -268,14 +268,9 @@ func main() {
 	}
 	
 	for {
-		line, err := reader.ReadString('\n')
-		line = strings.TrimSpace(line)
+		if !scanner.Scan() { break }
+		line := strings.TrimSpace(scanner.Text())
 		
-		if err != nil {
-			log.Println(err)
-			break
-		}
-
 		{
 			parsedline, err := parseAsmLine(line)
 			pp.Fprintf(os.Stderr, "processing %v... ", parsedline)
