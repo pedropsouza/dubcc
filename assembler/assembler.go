@@ -93,17 +93,23 @@ type InLine struct {
 	args []string
 }
 
+var emptyLineErr = errors.New("empty line")
+
 func parseAsmLine(rawLine string) (line InLine, err error) {
 	label, code, labeled := strings.Cut(rawLine, ":")
 	if !labeled {
 		code = label
+		label = ""
 	}
 	fields := strings.Fields(code)
+	if len(fields) < 1 {
+		return InLine {}, emptyLineErr
+	}
 	return InLine {
 		raw: rawLine,
 		label: label,
 		op: fields[0],
-		args: fields[1:],
+		args: fields[min(len(fields), 1):],
 	}, nil
 }
 
@@ -233,7 +239,7 @@ func (info *Info) registerConst(name string, val datatypes.MachineWord) {
 }
 
 func main() {
-	reader := bufio.NewReader(os.Stdin)
+	scanner := bufio.NewScanner(os.Stdin)
 
 	if len(os.Args) == 2 {
 		inputFile, err := os.ReadFile(os.Args[1])
@@ -241,7 +247,7 @@ func main() {
 			log.Println(err)
 		}
 		r := bytes.NewReader(inputFile)
-		reader = bufio.NewReader(r)
+		scanner = bufio.NewScanner(r)
 	}
 
 	info := Info {
@@ -268,19 +274,16 @@ func main() {
 	}
 	
 	for {
-		line, err := reader.ReadString('\n')
-		line = strings.TrimSpace(line)
+		if !scanner.Scan() { break }
+		line := strings.TrimSpace(scanner.Text())
 		
-		if err != nil {
-			log.Println(err)
-			break
-		}
-
 		{
 			parsedline, err := parseAsmLine(line)
 			pp.Fprintf(os.Stderr, "processing %v... ", parsedline)
 			if err != nil {
-				log.Println(err)
+				if err != emptyLineErr {
+					log.Println(err)
+				}
 				continue
 			}
 			outLine, err := info.firstPass(parsedline)
