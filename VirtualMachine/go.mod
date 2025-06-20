@@ -3,7 +3,7 @@ module VirtualMachine
 go 1.24.3
 
 require (
-	dubcc/datatypes v0.0.0-00010101000000-000000000000
+	dubcc v0.0.0-00010101000000-000000000000
 	gioui.org v0.8.0
 )
 
@@ -17,4 +17,4 @@ require (
 	golang.org/x/text v0.16.0 // indirect
 )
 
-replace dubcc/datatypes => ../datatypes
+replace dubcc => ../shared/

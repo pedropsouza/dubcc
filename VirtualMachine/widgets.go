@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"dubcc/datatypes"
+	"dubcc"
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
@@ -117,7 +117,7 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 
 				// stepBtn and resetBtn
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					if sim.State != datatypes.SimStateHalt {
+					if sim.State != dubcc.SimStateHalt {
 						if stepBtn.Clicked(gtx) {
 							StepSimulation()
 						}
@@ -125,8 +125,8 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 					} else {
 						if resetBtn.Clicked(gtx) {
 							log.Printf("reset!")
-							sim.State = datatypes.SimStateRun
-							sim.Registers = datatypes.StartupRegisters(&sim.Isa, datatypes.MachineAddress(len(sim.Mem.Work)))
+							sim.State = dubcc.SimStateRun
+							sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
 						}
 						return resetBtnView.Layout(gtx)
 					}
@@ -191,20 +191,20 @@ func CompileCode() {
 					}
 					buf[idx] = readb
 				}
-				var v datatypes.MachineWord
-				v = datatypes.MachineWord(buf[0]) << 8 + datatypes.MachineWord(buf[1])
+				var v dubcc.MachineWord
+				v = dubcc.MachineWord(buf[0]) << 8 + dubcc.MachineWord(buf[1])
 				log.Printf("got word %x (%d) out of %v\n", v, v, buf)
 				sim.Mem.Work[memPos] = v
 			}
 		}
-		sim.State = datatypes.SimStatePause
+		sim.State = dubcc.SimStatePause
 	}()
 }
 
 func StepSimulation() {
-	pc := sim.GetRegister(datatypes.RegPC)
+	pc := sim.GetRegister(dubcc.RegPC)
 	instWord := sim.Mem.Work[pc]
-	sim.SetRegister(datatypes.RegRI, instWord)
+	sim.SetRegister(dubcc.RegRI, instWord)
 	inst, ifound := sim.InstructionFromWord(instWord)
 	if !ifound {
 		log.Printf("invalid instruction %x (%d)\n", instWord, instWord)
@@ -213,27 +213,27 @@ func StepSimulation() {
 		if !hfound {
 			log.Printf("couldn't handle instruction %v\n", inst)
 		}
-		instPos := datatypes.MachineAddress(pc)
-		argsTerm := instPos + 1 + datatypes.MachineAddress(inst.NumArgs)
+		instPos := dubcc.MachineAddress(pc)
+		argsTerm := instPos + 1 + dubcc.MachineAddress(inst.NumArgs)
 		// set pc before calling the handler
 		// that way branching works
-		nextPc := (pc + datatypes.MachineWord(1+inst.NumArgs)) % datatypes.MachineWord(len(sim.Mem.Work))
+		nextPc := (pc + dubcc.MachineWord(1+inst.NumArgs)) % dubcc.MachineWord(len(sim.Mem.Work))
 		sim.MapRegister(
-			datatypes.RegPC,
-			func(pc datatypes.MachineWord) datatypes.MachineWord {
+			dubcc.RegPC,
+			func(pc dubcc.MachineWord) dubcc.MachineWord {
 				return nextPc
 			},
 		)
-		if nextPc < datatypes.MachineWord(instPos) {
+		if nextPc < dubcc.MachineWord(instPos) {
 			log.Printf("pc wrapped around! halt.")
-			sim.State = datatypes.SimStateHalt
+			sim.State = dubcc.SimStateHalt
 			return
 		}
 		args := sim.Mem.Work[instPos:argsTerm]
 		log.Printf("Executing %s with %v", inst.Name, args)
 		handler(&sim, args)
-		if sim.State != datatypes.SimStateHalt {
-			sim.State = datatypes.SimStatePause
+		if sim.State != dubcc.SimStateHalt {
+			sim.State = dubcc.SimStatePause
 		}
 	}
 }

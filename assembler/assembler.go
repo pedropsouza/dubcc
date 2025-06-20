@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"slices"
 	"bytes"
-	"dubcc/datatypes"
+	"dubcc"
 	"github.com/k0kubun/pp/v3"
 )
 
@@ -20,32 +20,32 @@ type DirectiveHandler struct {
 }
 
 type Info struct {
-	isa datatypes.ISA
+	isa dubcc.ISA
 	directives map[string]DirectiveHandler
-	symbols map[string]datatypes.MachineAddress
+	symbols map[string]dubcc.MachineAddress
 	undefSyms UndefSymChain
-	output []datatypes.MachineWord
-	line_counter datatypes.MachineAddress
+	output []dubcc.MachineWord
+	line_counter dubcc.MachineAddress
 }
 
 type UndefSymChainLink struct {
-	addr datatypes.MachineAddress // address for the link data in the binary
-	prev datatypes.MachineAddress // != 0 if this link is not the last for this symbol
-	from datatypes.MachineAddress // address of the unresolved code pos
+	addr dubcc.MachineAddress // address for the link data in the binary
+	prev dubcc.MachineAddress // != 0 if this link is not the last for this symbol
+	from dubcc.MachineAddress // address of the unresolved code pos
 	sign byte   // FIXME: iunno what this one does
 	name string
 }
 
 type UndefSymChain struct {
 	links []UndefSymChainLink
-	top datatypes.MachineAddress
-	base datatypes.MachineAddress
+	top dubcc.MachineAddress
+	base dubcc.MachineAddress
 }
 
 func BoolToInt(val bool) int { if val { return 1 } else { return 0 } }
 
 func (usymchain *UndefSymChain) ChainSym(
-	from datatypes.MachineAddress,
+	from dubcc.MachineAddress,
 	name string,
 ) *UndefSymChainLink {
 	var prevlink *UndefSymChainLink = nil
@@ -56,7 +56,7 @@ func (usymchain *UndefSymChain) ChainSym(
 		}
 	}
 	
-	prev := datatypes.MachineAddress(0)
+	prev := dubcc.MachineAddress(0)
 	if prevlink != nil {
 		prev = prevlink.addr
 	}
@@ -126,7 +126,7 @@ type Repr struct {
 	tag ReprKind
 	input string
 	symbol string
-	out datatypes.MachineWord
+	out dubcc.MachineWord
 }
 
 func (info *Info) firstPass(line InLine) (reprs []Repr, err error) {
@@ -162,20 +162,20 @@ func (info *Info) firstPass(line InLine) (reprs []Repr, err error) {
 			repr.symbol = arg
 			// can overflow, panic maybe?
 			// + immediate flag
-			repr.out = datatypes.MachineWord(num)
-			r[0].out |= datatypes.InstImmediateFlag
+			repr.out = dubcc.MachineWord(num)
+			r[0].out |= dubcc.InstImmediateFlag
 			continue
 		}
 		// aight it ain't a number
 		// check if it's a register
 		{
-			regflag := datatypes.MachineWord(datatypes.InstRegAFlag * BoolToInt(index == 1))
-			regflag |= datatypes.MachineWord(datatypes.InstRegBFlag * BoolToInt(index == 2))
+			regflag := dubcc.MachineWord(dubcc.InstRegAFlag * BoolToInt(index == 1))
+			regflag |= dubcc.MachineWord(dubcc.InstRegBFlag * BoolToInt(index == 2))
 			reg, found := info.isa.Registers[arg]
 			if found {
 				repr.tag = ReprComplete
 				repr.symbol = arg
-				repr.out = datatypes.MachineWord(reg.Address)
+				repr.out = dubcc.MachineWord(reg.Address)
 				r[0].out |= regflag
 				continue
 			}
@@ -185,14 +185,14 @@ func (info *Info) firstPass(line InLine) (reprs []Repr, err error) {
 			if found {
 				repr.tag = ReprComplete
 				repr.symbol = arg
-				repr.out = datatypes.MachineWord(lookup)
+				repr.out = dubcc.MachineWord(lookup)
 			} else {
 				// new link should be added
-				from := datatypes.MachineAddress(len(info.output) + index)
+				from := dubcc.MachineAddress(len(info.output) + index)
 				newLink := info.undefSyms.ChainSym(from, arg)
 				repr.tag = ReprPartial
 				repr.symbol = arg
-				repr.out = datatypes.MachineWord(newLink.addr)
+				repr.out = dubcc.MachineWord(newLink.addr)
 			}
 		}
 		// TODO/FIXME: decide which 
@@ -209,7 +209,7 @@ func (info *Info) firstPass(line InLine) (reprs []Repr, err error) {
 		info.output = append(info.output, repr.out)
 	}
 
-	info.line_counter = datatypes.MachineAddress(len(info.output))
+	info.line_counter = dubcc.MachineAddress(len(info.output))
 	
 	return r, nil
 }
@@ -239,7 +239,7 @@ func parseNum(in string) (num uint64, err error) {
 	return 0, errors.New("invalid number")
 }
 
-func (info *Info) registerLabelAt(name string, where datatypes.MachineAddress) {
+func (info *Info) registerLabelAt(name string, where dubcc.MachineAddress) {
 	info.symbols[name] = where
 }
 
@@ -247,7 +247,7 @@ func (info *Info) registerLabel(name string) {
 	info.registerLabelAt(name, info.line_counter)
 }
 
-func (info *Info) registerConst(name string, val datatypes.MachineWord) {
+func (info *Info) registerConst(name string, val dubcc.MachineWord) {
 	if name != "" {
 		info.symbols[name] = info.line_counter
 	}
@@ -268,7 +268,7 @@ func main() {
 	}
 
 	info := Info {
-		isa: datatypes.GetDefaultISA(),
+		isa: dubcc.GetDefaultISA(),
 		directives: map[string]DirectiveHandler {
 			"space": DirectiveHandler {
 				f: func (info *Info, line InLine) {
@@ -282,12 +282,12 @@ func main() {
 					if err != nil {
 						log.Fatalf("can't decide value for const %v: %v", line.label, err)
 					}
-					info.registerConst(line.label, datatypes.MachineWord(num))
+					info.registerConst(line.label, dubcc.MachineWord(num))
 				},
 				numArgs: 1,
 			},
 		},
-		symbols: make(map[string]datatypes.MachineAddress),
+		symbols: make(map[string]dubcc.MachineAddress),
 	}
 	
 	for {
@@ -318,7 +318,7 @@ func main() {
 			if !found {
 				log.Fatalf("undefined symbol: %v (%v)", link.name, link)
 			}
-			info.output[link.from] = datatypes.MachineWord(sym)
+			info.output[link.from] = dubcc.MachineWord(sym)
 		}
 	}
 	pp.Fprintf(os.Stderr, "Symbols: %v\n", info.symbols)

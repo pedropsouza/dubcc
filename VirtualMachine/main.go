@@ -1,7 +1,7 @@
 package main
 
 import (
-	"dubcc/datatypes"
+	"dubcc"
 	"fmt"
 	"gioui.org/app"
 	"gioui.org/op"
@@ -18,12 +18,12 @@ var assembleBtn widget.Clickable
 var stepBtn widget.Clickable
 var resetBtn widget.Clickable
 
-var memCap datatypes.MachineAddress
-var sim datatypes.Sim
+var memCap dubcc.MachineAddress
+var sim dubcc.Sim
 
 func main() {
-	memCap = datatypes.MachineAddress(1 << 6)
-	sim = datatypes.MakeSim(memCap)
+	memCap = dubcc.MachineAddress(1 << 6)
+	sim = dubcc.MakeSim(memCap)
 	fmt.Println(sim)
 	InitTables(&sim)
 	execPath, err := os.Executable()

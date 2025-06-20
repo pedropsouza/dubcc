@@ -1,4 +1,4 @@
-package datatypes
+package dubcc
 
 type Instruction struct {
 	Name string

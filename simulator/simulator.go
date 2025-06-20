@@ -8,13 +8,13 @@ import (
 	"os"
 	"os/signal"
 	"time"
-	"dubcc/datatypes"
+	"dubcc"
 	"github.com/k0kubun/pp/v3"
 )
 
 func main() {
-	memCap := datatypes.MachineAddress(1<<5)
-	sim := datatypes.MakeSim(memCap) // 32b for now
+	memCap := dubcc.MachineAddress(1<<5)
+	sim := dubcc.MakeSim(memCap) // 32b for now
 	log.Printf("loaded %d", memCap)
 	reader := bufio.NewReader(os.Stdin)
 
@@ -23,7 +23,7 @@ func main() {
 		signal.Notify(c, os.Interrupt)
 		go func() {
 			for _ = range c {
-				sim.State = datatypes.SimStateHalt
+				sim.State = dubcc.SimStateHalt
 			}
 		}()
 	}
@@ -41,15 +41,15 @@ func main() {
 				}
 				buf[idx] = readb
 			}
-			v := datatypes.MachineWord(buf[0] << 8 + buf[1])
+			v := dubcc.MachineWord(buf[0] << 8 + buf[1])
 			fmt.Fprintf(os.Stderr, "got word %x (%d) out of %v\n", v, v, buf)
 			sim.Mem.Work[mempos] = v
 		}
 	}
 
-	sim.State = datatypes.SimStateRun
+	sim.State = dubcc.SimStateRun
 	for {
-		if sim.State != datatypes.SimStateRun {
+		if sim.State != dubcc.SimStateRun {
 			break
 		}
 		pc := sim.Isa.Registers["PC"]
@@ -66,11 +66,11 @@ func main() {
 		if !hfound {
 			fmt.Fprintf(os.Stderr, "couldn't handle instruction %v\n", inst)
 		}
-		instPos := datatypes.MachineAddress(pc.Content)
-		argsTerm := instPos + 1 + datatypes.MachineAddress(inst.NumArgs)
+		instPos := dubcc.MachineAddress(pc.Content)
+		argsTerm := instPos + 1 + dubcc.MachineAddress(inst.NumArgs)
 		// set pc before calling the handler
 		// that way branching works
-		pc.Content += datatypes.MachineWord(1 + inst.NumArgs)
+		pc.Content += dubcc.MachineWord(1 + inst.NumArgs)
 		args := sim.Mem.Work[instPos:argsTerm]
 		log.Printf("Executing %s with %v", inst.Name, args)
 		handler(&sim, args)

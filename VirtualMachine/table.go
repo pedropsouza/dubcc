@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
-	"dubcc/datatypes"
+	"dubcc"
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
@@ -22,10 +22,10 @@ type (
 
 	RegisterTableEntry struct {
 		name string
-		reg *datatypes.Register
+		reg *dubcc.Register
 	}
 	MemoryTableEntry struct {
-		address datatypes.MachineAddress
+		address dubcc.MachineAddress
 	}
 	TableEntry interface {
 		GetColumn(ColumnEnum) string
@@ -143,7 +143,7 @@ func (tbl *Table) Draw(gtx layout.Context, th *material.Theme, colWeights []floa
 	})
 }
 
-func InitTables(sim *datatypes.Sim) {
+func InitTables(sim *dubcc.Sim) {
 	for name, reg := range sim.Isa.Registers {
 		tableRegisters.data = append(
 			tableRegisters.data,
@@ -153,7 +153,7 @@ func InitTables(sim *datatypes.Sim) {
 	for idx := range sim.Mem.Work {
 		tableMemory.data = append(
 			tableMemory.data,
-			&MemoryTableEntry { datatypes.MachineAddress(idx) },
+			&MemoryTableEntry { dubcc.MachineAddress(idx) },
 		)
 	}
 }
