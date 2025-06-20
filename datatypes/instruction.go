@@ -19,6 +19,8 @@ const (
 const (
 	InstIndirectAFlag = (1 << 5) << iota
 	InstIndirectBFlag
+	InstRegAFlag
+	InstRegBFlag
 	InstImmediateFlag
 )
 

@@ -42,6 +42,8 @@ type UndefSymChain struct {
 	base datatypes.MachineAddress
 }
 
+func BoolToInt(val bool) int { if val { return 1 } else { return 0 } }
+
 func (usymchain *UndefSymChain) ChainSym(
 	from datatypes.MachineAddress,
 	name string,
@@ -151,32 +153,46 @@ func (info *Info) firstPass(line InLine) (reprs []Repr, err error) {
 	
 	for index, arg := range line.args {
 		index += 1
+		repr := &r[index]
 		// try constant interpretation
-		r[index].input = arg
+		repr.input = arg
 		num, err := parseNum(arg)
 		if err == nil {
-			r[index].tag = ReprComplete
-			r[index].symbol = arg
+			repr.tag = ReprComplete
+			repr.symbol = arg
 			// can overflow, panic maybe?
 			// + immediate flag
-			r[index].out = datatypes.MachineWord(num)
+			repr.out = datatypes.MachineWord(num)
 			r[0].out |= datatypes.InstImmediateFlag
 			continue
 		}
 		// aight it ain't a number
-		// check symbol table
-		lookup, found := info.symbols[arg]
-		if found {
-			r[index].tag = ReprComplete
-			r[index].symbol = arg
-			r[index].out = datatypes.MachineWord(lookup)
-		} else {
-			// new link should be added
-			from := datatypes.MachineAddress(len(info.output) + index)
-			newLink := info.undefSyms.ChainSym(from, arg)
-			r[index].tag = ReprPartial
-			r[index].symbol = arg
-			r[index].out = datatypes.MachineWord(newLink.addr)
+		// check if it's a register
+		{
+			regflag := datatypes.MachineWord(datatypes.InstRegAFlag * BoolToInt(index == 1))
+			regflag |= datatypes.MachineWord(datatypes.InstRegBFlag * BoolToInt(index == 2))
+			reg, found := info.isa.Registers[arg]
+			if found {
+				repr.tag = ReprComplete
+				repr.symbol = arg
+				repr.out = datatypes.MachineWord(reg.Address) | regflag
+				continue
+			}
+		}
+			{ // check symbol table
+			lookup, found := info.symbols[arg]
+			if found {
+				repr.tag = ReprComplete
+				repr.symbol = arg
+				repr.out = datatypes.MachineWord(lookup)
+			} else {
+				// new link should be added
+				from := datatypes.MachineAddress(len(info.output) + index)
+				newLink := info.undefSyms.ChainSym(from, arg)
+				repr.tag = ReprPartial
+				repr.symbol = arg
+				repr.out = datatypes.MachineWord(newLink.addr)
+			}
 		}
 		// TODO/FIXME: decide which 
 		// syntax we should use to
