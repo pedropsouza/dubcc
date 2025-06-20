@@ -175,7 +175,8 @@ func (info *Info) firstPass(line InLine) (reprs []Repr, err error) {
 			if found {
 				repr.tag = ReprComplete
 				repr.symbol = arg
-				repr.out = datatypes.MachineWord(reg.Address) | regflag
+				repr.out = datatypes.MachineWord(reg.Address)
+				r[0].out |= regflag
 				continue
 			}
 		}

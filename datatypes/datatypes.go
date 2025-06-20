@@ -40,45 +40,55 @@ type SimMem struct {
 	Work []MachineWord
 }
 
-func (s *Sim) ResolveAddressMode(opword MachineWord, args []MachineWord) (a MachineWord, b MachineWord) {
-	a = args[0]
+func (s *Sim) ResolveAddressMode(opword MachineWord, args []MachineWord) []*MachineWord {
 	inst, found := s.InstructionFromWord(opword)
 	if !found {
 		panic("bad instruction")
 	}
-	hasb := inst.NumArgs > 1
-	if hasb {
-		if len(args) < 2 {
-			panic("bad args count")
-		}
-		b = args[1]
+	if inst.NumArgs != len(args) {
+		panic("argument count mismatch")
 	}
-	if IsImmediate(opword) {
-		return a, 0 // no immediate binary instructions i believe
-	} else {
-		if IsIndirectA(opword) {
-			a = s.Mem.Work[s.Mem.Work[a]]
-		}
-		if hasb && IsIndirectB(opword) {
-			b = s.Mem.Work[s.Mem.Work[b]]
-		} else {
-			if (inst.Flags & InstFlagImmediate) != 0 {
-				// this instruction accepts immediates,
-				// but the actual opword is not marked as immediate
-				// therefore it must be directly resolved
-				a = s.Mem.Work[a]
-			}
-			if hasb {
-				if (inst.Flags & InstFlagImmediateB) != 0 {
-					// this instruction accepts 2nd pos immediates,
-					// but the actual opword is not marked as 2nd pos immediate
-					// therefore it must be directly resolved
-					b = s.Mem.Work[b]
-				}
-			}
-		}
-		return a, b
+	
+	immediateTests := []func() bool {
+		func() bool { return (opword & InstImmediateFlag) != 0 && (inst.Flags & InstFlagImmediate) != 0 },
+		func() bool { return (opword & InstImmediateFlag) != 0 && (inst.Flags & InstFlagImmediateB) != 0 },
 	}
+	indirectTests := []func() bool {
+		func() bool { return (opword & InstIndirectAFlag) != 0 },
+		func() bool { return (opword & InstIndirectBFlag) != 0 },
+	}
+	registerTests := []func() bool {
+		func() bool { return (opword & InstRegAFlag) != 0 },
+		func() bool { return (opword & InstRegBFlag) != 0 },
+	}
+
+	out := make([]*MachineWord, 2)
+	for idx, arg := range args {
+		isIm := immediateTests[idx]()
+		isIn := indirectTests[idx]()
+		isReg := registerTests[idx]()
+
+		if isReg {
+			out[idx] = &s.Registers[arg]
+		} else if isIm {
+			box := new(MachineWord)
+			*box = arg
+			out[idx] = box
+		} else if isIn {
+			out[idx] = &s.Mem.Work[s.Mem.Work[arg]]
+		} else { // only direct remaining
+			if (inst.Flags & InstFlagImmediate) == 0 {
+				// botch for the uuuh branch instructions?
+				// where Direct is a goddamn alias for Im
+				box := new(MachineWord)
+				*box = arg
+				out[idx] = box
+			} else {
+				out[idx] = &s.Mem.Work[arg] // direct
+			}
+		}
+	}
+	return out
 }
 
 func (s *Sim) GetRegister(regAddress MachineAddress) MachineWord {
@@ -110,9 +120,6 @@ func MakeSim(memSize MachineAddress) Sim {
 		mot[inst.Repr] = inst
 	}
 
-	regs := make([]MachineWord, len(isa.Registers))
-	regs[RegSP] = MachineWord(memSize - 1)
-
 	mopHandlers := make(map[MachineWord]InstHandler)
 	for name, handler := range InstHandlers() {
 		mopHandlers[isa.Instructions[name].Repr] = handler
@@ -124,7 +131,7 @@ func MakeSim(memSize MachineAddress) Sim {
 		},
 		Isa: isa,
 		MOT: mot,
-		Registers: regs,
+		Registers: StartupRegisters(&isa, memSize),
 		Handlers: mopHandlers,
 	}
 }

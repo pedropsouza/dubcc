@@ -16,6 +16,7 @@ import (
 var editor widget.Editor
 var assembleBtn widget.Clickable
 var stepBtn widget.Clickable
+var resetBtn widget.Clickable
 
 var memCap datatypes.MachineAddress
 var sim datatypes.Sim
@@ -34,6 +35,16 @@ func main() {
 	assemblerDir := path.Join(path.Dir(path.Dir(execPath)), "assembler")
 	os.Setenv("PATH", pathEnv+":"+assemblerDir)
 	log.Print(os.Getenv("PATH"))
+
+	if len(os.Args) > 1 {
+		code, err := os.ReadFile(os.Args[1])
+		if err == nil {
+			editor.SetText(string(code))
+		} else {
+			log.Printf("%v\n", err)
+		}
+	}
+
 	go func() {
 		window := new(app.Window)
 		window.Option(app.Title("dobam unka bee compiler collection (speed racer)"))

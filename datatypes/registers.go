@@ -80,3 +80,9 @@ func RegisterInfo() map[string]*Register {
 	}
 }
 
+func StartupRegisters(isa *ISA, memSize MachineAddress) (out []MachineWord) {
+	out = make([]MachineWord, len(isa.Registers))
+	out[RegSP] = MachineWord(memSize - 1)
+	return out
+}
+

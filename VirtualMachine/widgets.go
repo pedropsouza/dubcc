@@ -86,6 +86,10 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 	stepBtnView.Background = yellow
 	stepBtnView.Color = black
 	stepBtnView.Font.Typeface = customFont
+	resetBtnView := material.Button(th, &resetBtn, "Reset")
+	resetBtnView.Background = yellow
+	resetBtnView.Color = black
+	resetBtnView.Font.Typeface = customFont
 
 	return layout.Flex{
 		Axis:      layout.Horizontal,
@@ -102,63 +106,7 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 				}),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					if assembleBtn.Clicked(gtx) {
-						go func() {
-							cmd := exec.Command("assembler")
-							if cmd.Err != nil {
-								log.Print(cmd.Err)
-								return
-							}
-
-							cmd.Stdin = strings.NewReader(editor.Text())
-							stdout, outerr := cmd.StdoutPipe()
-							if outerr != nil {
-								log.Print(outerr)
-							}
-
-							go func() {
-								err := cmd.Start()
-								if err != nil {
-									log.Print(err)
-								}
-								err = cmd.Wait()
-								if err != nil {
-									log.Print(err)
-								}
-							}()
-
-							data, rerr := io.ReadAll(stdout)
-							if rerr != nil {
-								log.Print(rerr)
-								return
-							}
-							log.Print(data)
-							reader := bytes.NewReader(data)
-							{ // read bin to memory
-								buf := make([]byte, 2) // read one words worth at a time
-								done := false
-								for memPos := range sim.Mem.Work {
-									if done {
-										break
-									}
-									buf[0] = 0
-									buf[1] = 0
-									for idx := range buf {
-										readb, err := reader.ReadByte()
-										if err != nil {
-											if err == io.EOF {
-												done = true
-												break
-											}
-											log.Fatal("error reading stdin: %v", err)
-										}
-										buf[idx] = readb
-									}
-									v := datatypes.MachineWord(buf[0]<<8 + buf[1])
-									log.Printf("got word %x (%d) out of %v\n", v, v, buf)
-									sim.Mem.Work[memPos] = v
-								}
-							}
-						}()
+						CompileCode()
 					}
 					return assembleBtnView.Layout(gtx)
 				}),
@@ -167,36 +115,21 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 					layout.Spacer{Width: unit.Dp(16)}.Layout,
 				),
 
-				// stepBtn
+				// stepBtn and resetBtn
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					if stepBtn.Clicked(gtx) {
-						pc := sim.GetRegister(datatypes.RegPC)
-						instWord := sim.Mem.Work[pc]
-						sim.SetRegister(datatypes.RegRI, instWord)
-						inst, ifound := sim.InstructionFromWord(instWord)
-						if !ifound {
-							log.Printf("invalid instruction %x (%d)\n", instWord, instWord)
-						} else {
-							handler, hfound := sim.Handlers[inst.Repr]
-							if !hfound {
-								log.Printf("couldn't handle instruction %v\n", inst)
-							}
-							instPos := datatypes.MachineAddress(pc)
-							argsTerm := instPos + 1 + datatypes.MachineAddress(inst.NumArgs)
-							// set pc before calling the handler
-							// that way branching works
-							sim.MapRegister(
-								datatypes.RegPC,
-								func(pc datatypes.MachineWord) datatypes.MachineWord {
-									return pc + datatypes.MachineWord(1+inst.NumArgs)
-								},
-							)
-							args := sim.Mem.Work[instPos:argsTerm]
-							log.Printf("Executing %s with %v", inst.Name, args)
-							handler(&sim, args)
+					if sim.State != datatypes.SimStateHalt {
+						if stepBtn.Clicked(gtx) {
+							StepSimulation()
 						}
+						return stepBtnView.Layout(gtx)
+					} else {
+						if resetBtn.Clicked(gtx) {
+							log.Printf("reset!")
+							sim.State = datatypes.SimStateRun
+							sim.Registers = datatypes.StartupRegisters(&sim.Isa, datatypes.MachineAddress(len(sim.Mem.Work)))
+						}
+						return resetBtnView.Layout(gtx)
 					}
-					return stepBtnView.Layout(gtx)
 				}),
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 					return layout.Dimensions{Size: gtx.Constraints.Min}
@@ -204,4 +137,103 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 			)
 		}),
 	)
+}
+
+func CompileCode() {
+	go func() {
+		cmd := exec.Command("assembler")
+		if cmd.Err != nil {
+			log.Print(cmd.Err)
+			return
+		}
+
+		cmd.Stdin = strings.NewReader(editor.Text())
+		stdout, outerr := cmd.StdoutPipe()
+		if outerr != nil {
+			log.Print(outerr)
+		}
+
+		go func() {
+			err := cmd.Start()
+			if err != nil {
+				log.Print(err)
+			}
+			err = cmd.Wait()
+			if err != nil {
+				log.Print(err)
+			}
+		}()
+
+		data, rerr := io.ReadAll(stdout)
+		if rerr != nil {
+			log.Print(rerr)
+			return
+		}
+		log.Print(data)
+		reader := bytes.NewReader(data)
+		{ // read bin to memory
+			buf := make([]byte, 2) // read one words worth at a time
+			done := false
+			for memPos := range sim.Mem.Work {
+				if done {
+					break
+				}
+				buf[0] = 0
+				buf[1] = 0
+				for idx := range buf {
+					readb, err := reader.ReadByte()
+					if err != nil {
+						if err == io.EOF {
+							done = true
+							break
+						}
+						log.Fatal("error reading stdin: %v", err)
+					}
+					buf[idx] = readb
+				}
+				var v datatypes.MachineWord
+				v = datatypes.MachineWord(buf[0]) << 8 + datatypes.MachineWord(buf[1])
+				log.Printf("got word %x (%d) out of %v\n", v, v, buf)
+				sim.Mem.Work[memPos] = v
+			}
+		}
+		sim.State = datatypes.SimStatePause
+	}()
+}
+
+func StepSimulation() {
+	pc := sim.GetRegister(datatypes.RegPC)
+	instWord := sim.Mem.Work[pc]
+	sim.SetRegister(datatypes.RegRI, instWord)
+	inst, ifound := sim.InstructionFromWord(instWord)
+	if !ifound {
+		log.Printf("invalid instruction %x (%d)\n", instWord, instWord)
+	} else {
+		handler, hfound := sim.Handlers[inst.Repr]
+		if !hfound {
+			log.Printf("couldn't handle instruction %v\n", inst)
+		}
+		instPos := datatypes.MachineAddress(pc)
+		argsTerm := instPos + 1 + datatypes.MachineAddress(inst.NumArgs)
+		// set pc before calling the handler
+		// that way branching works
+		nextPc := (pc + datatypes.MachineWord(1+inst.NumArgs)) % datatypes.MachineWord(len(sim.Mem.Work))
+		sim.MapRegister(
+			datatypes.RegPC,
+			func(pc datatypes.MachineWord) datatypes.MachineWord {
+				return nextPc
+			},
+		)
+		if nextPc < datatypes.MachineWord(instPos) {
+			log.Printf("pc wrapped around! halt.")
+			sim.State = datatypes.SimStateHalt
+			return
+		}
+		args := sim.Mem.Work[instPos:argsTerm]
+		log.Printf("Executing %s with %v", inst.Name, args)
+		handler(&sim, args)
+		if sim.State != datatypes.SimStateHalt {
+			sim.State = datatypes.SimStatePause
+		}
+	}
 }

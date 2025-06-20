@@ -65,136 +65,130 @@ func InstMap() map[string]Instruction {
 	}
 }
 
+func registerMap1Handler(
+	regAddress MachineAddress,
+	mapf func (*Sim, MachineWord, MachineWord) MachineWord,
+) InstHandler {
+	return func (s *Sim, args []MachineWord) {
+		opword := args[0]
+		vals := s.ResolveAddressMode(opword, args[1:])
+		reg := &s.Registers[regAddress]
+		*reg = mapf(s, *reg, *vals[0])
+	}
+}
+
+func registerMap2Handler(
+	regAddress MachineAddress,
+	mapf func (*Sim, MachineWord, MachineWord, MachineWord) MachineWord,
+) InstHandler {
+	return func (s *Sim, args []MachineWord) {
+		opword := args[0]
+		vals := s.ResolveAddressMode(opword, args[1:])
+		reg := &s.Registers[regAddress]
+		*reg = mapf(s, *reg, *vals[0], *vals[1])
+	}
+}
+
+func mutateState1Handler(callback func (*Sim, *MachineWord)) InstHandler {
+	return func (s *Sim, args[]MachineWord) {
+		opword := args[0]
+		vals := s.ResolveAddressMode(opword, args[1:])
+		callback(s, vals[0])
+	}
+}
+
+func mutateState2Handler(callback func (*Sim, *MachineWord, *MachineWord)) InstHandler {
+	return func (s *Sim, args[]MachineWord) {
+		opword := args[0]
+		vals := s.ResolveAddressMode(opword, args[1:])
+		callback(s, vals[0], vals[1])
+	}
+}
+
 func InstHandlers() map[string]InstHandler {
 	return map[string]InstHandler {
-		"add": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegACC,
-				func (acc MachineWord) MachineWord {
-					return acc + value
-				},
-			)
-		},
-		"sub": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegACC,
-				func (acc MachineWord) MachineWord {
-					return acc - value
-				},
-			)
-		},
-		"divide": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegACC,
-				func(acc MachineWord) MachineWord { return acc / value },
-			)
-		},
-		"mult": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegACC,
-				func(acc MachineWord) MachineWord { return acc * value },
-			)
-		},
-		"br": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			// if not indirect, must be treated as immediate else labels break
-			if !(IsIndirectA(opword) || IsIndirectB(opword)) {
-				opword |= InstImmediateFlag
-			}
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegPC,
-				func (pc MachineWord) MachineWord {
+		"add": registerMap1Handler(
+			RegACC,
+			func (s *Sim, acc MachineWord, value MachineWord) MachineWord {
+				return acc + value
+			},
+		),
+		"sub": registerMap1Handler(
+			RegACC,
+			func (s *Sim, acc MachineWord, value MachineWord) MachineWord {
+				return acc - value
+			},
+		),
+		"divide": registerMap1Handler(
+			RegACC,
+			func(s *Sim, acc MachineWord, value MachineWord) MachineWord {
+				return acc / value
+			},
+		),
+		"mult": registerMap1Handler(
+			RegACC,
+			func(s *Sim, acc MachineWord, value MachineWord) MachineWord {
+				return acc * value
+			},
+		),
+		"br": registerMap1Handler(
+			RegPC,
+			func (s *Sim, pc MachineWord, value MachineWord) MachineWord {
+				return value
+			},
+		),
+		"brpos": registerMap1Handler(
+			RegPC,
+			func (s *Sim, pc MachineWord, value MachineWord) MachineWord {
+				acc_v := s.GetRegister(RegACC)
+				if acc_v != 0 && (acc_v & 0x8000) == 0 {
 					return value
-				},
-			)
-		},
-		"brpos": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			// if not indirect, must be treated as immediate else labels break
-			if !(IsIndirectA(opword) || IsIndirectB(opword)) {
-				opword |= InstImmediateFlag
-			}
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegPC,
-				func (pc MachineWord) MachineWord {
-					acc_v := s.GetRegister(RegACC)
-					if acc_v != 0 && (acc_v & 0x8000) == 0 {
-						return value
-					} else {
-						return pc
-					}
-				},
-			)
-		},
-		"brneg": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			// if not indirect, must be treated as immediate else labels break
-			if !(IsIndirectA(opword) || IsIndirectB(opword)) {
-				opword |= InstImmediateFlag
-			}
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegPC,
-				func (pc MachineWord) MachineWord {
-					if (s.GetRegister(RegACC) & 0x8000) > 0 {
-						return value
-					} else {
-						return pc
-					}
-				},
-			)
-		},
-		"brzero": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			// if not indirect, must be treated as immediate else labels break
-			if !(IsIndirectA(opword) || IsIndirectB(opword)) {
-				opword |= InstImmediateFlag
-			}
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegPC,
-				func (pc MachineWord) MachineWord {
-					if s.GetRegister(RegACC) == 0 {
-						return value
-					} else {
-						return pc
-					}
-				},
-			)
-		},
-		"load": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegACC,
-				func(acc MachineWord) MachineWord { return value },
-			)
-		},
-		"store": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.Mem.Work[value] = s.GetRegister(RegACC)
-		},
-		"stop": func(s *Sim, args []MachineWord) {
-			s.State = SimStateHalt
-		},
-		"copy": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			l, r := s.ResolveAddressMode(opword, args[1:])
-			s.Mem.Work[l] = s.Mem.Work[r]
-		},
-		"push": func(s *Sim, args []MachineWord) {
-			// FIXME: unimplemented
-		},
+				} else {
+					return pc
+				}
+			},
+		),
+		"brneg": registerMap1Handler(
+			RegPC,
+			func (s *Sim, pc MachineWord, value MachineWord) MachineWord {
+				if (s.GetRegister(RegACC) & 0x8000) > 0 {
+					return value
+				} else {
+					return pc
+				}
+			},
+		),
+		"brzero": registerMap1Handler(
+			RegPC,
+			func (s *Sim, pc MachineWord, value MachineWord) MachineWord {
+				if s.GetRegister(RegACC) == 0 {
+					return value
+				} else {
+					return pc
+				}
+			},
+		),
+		"load": registerMap1Handler(
+			RegACC,
+			func(s *Sim, acc MachineWord, value MachineWord) MachineWord {
+				return value
+			},
+		),
+		"store": mutateState1Handler(func (s *Sim, value *MachineWord) {
+				*value = s.GetRegister(RegACC)
+			},
+		),
+		"stop": mutateState1Handler(func (s *Sim, value *MachineWord) {
+				s.State = SimStateHalt
+			},
+		),
+		"copy": mutateState2Handler(func (s *Sim, l, r *MachineWord) {
+				*l = *r
+			},
+		),
+		"push": mutateState1Handler(func(s *Sim, value *MachineWord) {
+				// FIXME: unimplemented
+			},
+		),
 	}
 }
