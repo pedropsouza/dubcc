@@ -21,7 +21,7 @@ Trabalho realizado na disciplina de Programação de Sistemas na Universidade Fe
 
 Para testar o programa desenvolvido, certifique-se que possua:
 
-- Linguagem Go <img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" />
+- <img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" /> Linguagem Go
 - Sistema operacional Windows ou Linux
 
 ### 💻 Executando
@@ -32,7 +32,7 @@ Líder
 - Pedro Porto Souza
 
 Vice-Líder
-- Stephan Heidmann <img src="https://img.shields.io/badge/Instagram-E4405F?style=for-the-badge&logo=instagram&logoColor=white" /> heidmannstephan
+- Stephan Heidmann
 
 Membros
 - Rafael Caetano
