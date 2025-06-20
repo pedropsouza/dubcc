@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"dubcc/datatypes"
-	"fmt"
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
@@ -14,7 +13,6 @@ import (
 	"image/color"
 	"io"
 	"log"
-	"os"
 	"os/exec"
 	"strings"
 )
@@ -137,56 +135,66 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 							reader := bytes.NewReader(data)
 							{ // read bin to memory
 								buf := make([]byte, 2) // read one words worth at a time
-							read_file:
-								for mempos := range sim.Mem.Work {
+								done := false
+								for memPos := range sim.Mem.Work {
+									if done {
+										break
+									}
+									buf[0] = 0
+									buf[1] = 0
 									for idx := range buf {
 										readb, err := reader.ReadByte()
 										if err != nil {
 											if err == io.EOF {
-												break read_file
+												done = true
+												break
 											}
 											log.Fatal("error reading stdin: %v", err)
 										}
 										buf[idx] = readb
 									}
 									v := datatypes.MachineWord(buf[0]<<8 + buf[1])
-									fmt.Fprintf(os.Stderr, "got word %x (%d) out of %v\n", v, v, buf)
-									sim.Mem.Work[mempos] = v
+									log.Printf("got word %x (%d) out of %v\n", v, v, buf)
+									sim.Mem.Work[memPos] = v
 								}
 							}
 						}()
 					}
 					return assembleBtnView.Layout(gtx)
 				}),
+
 				layout.Rigid(
 					layout.Spacer{Width: unit.Dp(16)}.Layout,
 				),
 
 				// stepBtn
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				layout.Flexed(0.2, func(gtx layout.Context) layout.Dimensions {
 					if stepBtn.Clicked(gtx) {
-						pc := sim.Isa.Registers["PC"]
-						ri := sim.Isa.Registers["RI"]
-						//re := sim.Isa.Registers["RE"]
-						ri.Content = sim.Mem.Work[pc.Content]
-						inst, ifound := sim.Isa.InstructionFromWord(ri.Content)
+						pc := sim.GetRegister(datatypes.RegPC)
+						instWord := sim.Mem.Work[pc]
+						sim.SetRegister(datatypes.RegRI, instWord)
+						inst, ifound := sim.InstructionFromWord(instWord)
 						if !ifound {
-							fmt.Fprintf(os.Stderr,
-								"invalid instruction %x (%d)\n", ri.Content, ri.Content,
+							log.Printf("invalid instruction %x (%d)\n", instWord, instWord)
+						} else {
+							handler, hfound := sim.Handlers[inst.Repr]
+							if !hfound {
+								log.Printf("couldn't handle instruction %v\n", inst)
+							}
+							instPos := datatypes.MachineAddress(pc)
+							argsTerm := instPos + 1 + datatypes.MachineAddress(inst.NumArgs)
+							// set pc before calling the handler
+							// that way branching works
+							sim.MapRegister(
+								datatypes.RegPC,
+								func(pc datatypes.MachineWord) datatypes.MachineWord {
+									return pc + datatypes.MachineWord(1+inst.NumArgs)
+								},
 							)
+							args := sim.Mem.Work[instPos:argsTerm]
+							log.Printf("Executing %s with %v", inst.Name, args)
+							handler(&sim, args)
 						}
-						handler, hfound := sim.Handlers[inst.Repr]
-						if !hfound {
-							fmt.Fprintf(os.Stderr, "couldn't handle instruction %v\n", inst)
-						}
-						instPos := datatypes.MachineAddress(pc.Content)
-						argsTerm := instPos + 1 + datatypes.MachineAddress(inst.NumArgs)
-						// set pc before calling the handler
-						// that way branching works
-						pc.Content += datatypes.MachineWord(1 + inst.NumArgs)
-						args := sim.Mem.Work[instPos:argsTerm]
-						log.Printf("Executing %s with %v", inst.Name, args)
-						handler(&sim, args)
 					}
 					return stepBtnView.Layout(gtx)
 				}),
