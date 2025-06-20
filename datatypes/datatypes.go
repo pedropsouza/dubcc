@@ -103,137 +103,6 @@ func (s *Sim) MapRegister(regAddress MachineAddress, mapf func (MachineWord) Mac
 }
 
 func MakeSim(memSize MachineAddress) Sim {
-	instHandlers := map[string]InstHandler{
-		"add": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegACC,
-				func (acc MachineWord) MachineWord {
-					return acc + value
-				},
-			)
-		},
-		"sub": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegACC,
-				func (acc MachineWord) MachineWord {
-					return acc - value
-				},
-			)
-		},
-		"divide": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegACC,
-				func(acc MachineWord) MachineWord { return acc / value },
-			)
-		},
-		"mult": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegACC,
-				func(acc MachineWord) MachineWord { return acc * value },
-			)
-		},
-		"br": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			// if not indirect, must be treated as immediate else labels break
-			if !(IsIndirectA(opword) || IsIndirectB(opword)) {
-				opword |= InstImmediateFlag
-			}
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegPC,
-				func (pc MachineWord) MachineWord {
-					return value
-				},
-			)
-		},
-		"brpos": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			// if not indirect, must be treated as immediate else labels break
-			if !(IsIndirectA(opword) || IsIndirectB(opword)) {
-				opword |= InstImmediateFlag
-			}
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegPC,
-				func (pc MachineWord) MachineWord {
-					acc_v := s.GetRegister(RegACC)
-					if acc_v != 0 && (acc_v & 0x8000) == 0 {
-						return value
-					} else {
-						return pc
-					}
-				},
-			)
-		},
-		"brneg": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			// if not indirect, must be treated as immediate else labels break
-			if !(IsIndirectA(opword) || IsIndirectB(opword)) {
-				opword |= InstImmediateFlag
-			}
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegPC,
-				func (pc MachineWord) MachineWord {
-					if (s.GetRegister(RegACC) & 0x8000) > 0 {
-						return value
-					} else {
-						return pc
-					}
-				},
-			)
-		},
-		"brzero": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			// if not indirect, must be treated as immediate else labels break
-			if !(IsIndirectA(opword) || IsIndirectB(opword)) {
-				opword |= InstImmediateFlag
-			}
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegPC,
-				func (pc MachineWord) MachineWord {
-					if s.GetRegister(RegACC) == 0 {
-						return value
-					} else {
-						return pc
-					}
-				},
-			)
-		},
-		"load": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.MapRegister(
-				RegACC,
-				func(acc MachineWord) MachineWord { return value },
-			)
-		},
-		"store": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			value, _ := s.ResolveAddressMode(opword, args[1:])
-			s.Mem.Work[value] = s.GetRegister(RegACC)
-		},
-		"stop": func(s *Sim, args []MachineWord) {
-			s.State = SimStateHalt
-		},
-		"copy": func(s *Sim, args []MachineWord) {
-			opword := args[0]
-			l, r := s.ResolveAddressMode(opword, args[1:])
-			s.Mem.Work[l] = s.Mem.Work[r]
-		},
-		"push": func(s *Sim, args []MachineWord) {
-			// FIXME: unimplemented
-		},
-	}
 	isa := GetDefaultISA()
 	
 	mot := make(map[MachineWord]Instruction)
@@ -245,7 +114,7 @@ func MakeSim(memSize MachineAddress) Sim {
 	regs[RegSP] = MachineWord(memSize - 1)
 
 	mopHandlers := make(map[MachineWord]InstHandler)
-	for name, handler := range instHandlers {
+	for name, handler := range InstHandlers() {
 		mopHandlers[isa.Instructions[name].Repr] = handler
 	}
 
