@@ -168,7 +168,7 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 				),
 
 				// stepBtn
-				layout.Flexed(0.2, func(gtx layout.Context) layout.Dimensions {
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					if stepBtn.Clicked(gtx) {
 						pc := sim.GetRegister(datatypes.RegPC)
 						instWord := sim.Mem.Work[pc]
