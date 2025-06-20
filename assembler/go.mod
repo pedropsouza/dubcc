@@ -1,4 +1,4 @@
-module dubcc/assembler
+module dubcc/assembler-bin
 
 replace dubcc => ../shared/
 

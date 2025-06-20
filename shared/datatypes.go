@@ -50,16 +50,16 @@ func (s *Sim) ResolveAddressMode(opword MachineWord, args []MachineWord) []*Mach
 	}
 	
 	immediateTests := []func() bool {
-		func() bool { return (opword & InstImmediateFlag) != 0 && (inst.Flags & InstFlagImmediate) != 0 },
-		func() bool { return (opword & InstImmediateFlag) != 0 && (inst.Flags & InstFlagImmediateB) != 0 },
+		func() bool { return (opword & OpImmediateFlag) != 0 && (inst.Flags & InstImmediateA) != 0 },
+		func() bool { return (opword & OpImmediateFlag) != 0 && (inst.Flags & InstImmediateB) != 0 },
 	}
 	indirectTests := []func() bool {
-		func() bool { return (opword & InstIndirectAFlag) != 0 },
-		func() bool { return (opword & InstIndirectBFlag) != 0 },
+		func() bool { return (opword & OpIndirectAFlag) != 0 },
+		func() bool { return (opword & OpIndirectBFlag) != 0 },
 	}
 	registerTests := []func() bool {
-		func() bool { return (opword & InstRegAFlag) != 0 },
-		func() bool { return (opword & InstRegBFlag) != 0 },
+		func() bool { return (opword & OpRegAFlag) != 0 },
+		func() bool { return (opword & OpRegBFlag) != 0 },
 	}
 
 	out := make([]*MachineWord, 2)
@@ -77,7 +77,7 @@ func (s *Sim) ResolveAddressMode(opword MachineWord, args []MachineWord) []*Mach
 		} else if isIn {
 			out[idx] = &s.Mem.Work[s.Mem.Work[arg]]
 		} else { // only direct remaining
-			if (inst.Flags & InstFlagImmediate) == 0 {
+			if (inst.Flags & InstDirectIsImmediate) != 0 {
 				// botch for the uuuh branch instructions?
 				// where Direct is a goddamn alias for Im
 				box := new(MachineWord)

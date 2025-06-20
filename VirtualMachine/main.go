@@ -2,6 +2,7 @@ package main
 
 import (
 	"dubcc"
+	"dubcc/assembler"
 	"fmt"
 	"gioui.org/app"
 	"gioui.org/op"
@@ -20,6 +21,7 @@ var resetBtn widget.Clickable
 
 var memCap dubcc.MachineAddress
 var sim dubcc.Sim
+var assemblerInfo assembler.Info
 
 func main() {
 	memCap = dubcc.MachineAddress(1 << 6)

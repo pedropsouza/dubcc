@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"dubcc"
+	"dubcc/assembler"
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
@@ -11,9 +11,7 @@ import (
 	"gioui.org/widget/material"
 	"image"
 	"image/color"
-	"io"
 	"log"
-	"os/exec"
 	"strings"
 )
 
@@ -140,65 +138,20 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 }
 
 func CompileCode() {
-	go func() {
-		cmd := exec.Command("assembler")
-		if cmd.Err != nil {
-			log.Print(cmd.Err)
-			return
-		}
-
-		cmd.Stdin = strings.NewReader(editor.Text())
-		stdout, outerr := cmd.StdoutPipe()
-		if outerr != nil {
-			log.Print(outerr)
-		}
-
-		go func() {
-			err := cmd.Start()
-			if err != nil {
-				log.Print(err)
-			}
-			err = cmd.Wait()
-			if err != nil {
-				log.Print(err)
-			}
-		}()
-
-		data, rerr := io.ReadAll(stdout)
-		if rerr != nil {
-			log.Print(rerr)
-			return
-		}
-		log.Print(data)
-		reader := bytes.NewReader(data)
-		{ // read bin to memory
-			buf := make([]byte, 2) // read one words worth at a time
-			done := false
-			for memPos := range sim.Mem.Work {
-				if done {
-					break
-				}
-				buf[0] = 0
-				buf[1] = 0
-				for idx := range buf {
-					readb, err := reader.ReadByte()
-					if err != nil {
-						if err == io.EOF {
-							done = true
-							break
-						}
-						log.Fatal("error reading stdin: %v", err)
-					}
-					buf[idx] = readb
-				}
-				var v dubcc.MachineWord
-				v = dubcc.MachineWord(buf[0]) << 8 + dubcc.MachineWord(buf[1])
-				log.Printf("got word %x (%d) out of %v\n", v, v, buf)
-				sim.Mem.Work[memPos] = v
-			}
-		}
-		sim.State = dubcc.SimStatePause
-	}()
+	sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
+	assemblerInfo = assembler.MakeAssembler()
+	for _, line := range strings.Split(editor.Text(), "\n") {
+		assemblerInfo.FirstPassString(line)
+	}
+	assemblerInfo.SecondPass()
+	mem := assemblerInfo.GetOutput()
+	if len(mem) > len(sim.Mem.Work) {
+		panic("program's too big")
+	}
+	for idx, val := range mem {
+		sim.Mem.Work[idx] = val
+	}
+	sim.State = dubcc.SimStatePause
 }
 
 func StepSimulation() {
