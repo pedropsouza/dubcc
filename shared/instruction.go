@@ -66,6 +66,7 @@ func InstMap() map[string]Instruction {
 		"write":  inst{Name: "write", NumArgs: 1, Repr: 8, Flags: InstImmediateA},
 		"push":   inst{Name: "push", NumArgs: 1, Repr: 17, Flags: InstStack},
 		"pop":    inst{Name: "pop", NumArgs: 1, Repr: 18, Flags: InstStack},
+		"call":   inst{Name: "call", NumArgs: 1, Repr: 15, Flags: InstStack | InstDirectIsImmediate},
 	}
 }
 
@@ -196,10 +197,23 @@ func InstHandlers() map[string]InstHandler {
 		},
 		),
 		"pop": mutateState1Handler(func(s *Sim, value *MachineWord) {
-			*value = s.Mem.Work[s.GetRegister(RegSP)]
 			if !(s.GetRegister(RegSP) == (MachineWord(len(s.Mem.Work)) - 1)) {
 				s.MapRegister(RegSP, func(valueSP MachineWord) MachineWord { return valueSP + 1 })
 			}
+			*value = s.Mem.Work[s.GetRegister(RegSP)]
+		},
+		),
+		"call": mutateState1Handler(func(s *Sim, value *MachineWord) {
+			s.Mem.Work[s.GetRegister(RegSP)] = s.GetRegister(RegPC)
+			s.MapRegister(RegSP, func(valueSP MachineWord) MachineWord { return valueSP - 1 })
+			s.SetRegister(RegPC, *value)
+
+		}),
+		"ret": mutateState1Handler(func(s *Sim, value *MachineWord) {
+			if !(s.GetRegister(RegSP) == (MachineWord(len(s.Mem.Work)) - 1)) {
+				s.MapRegister(RegSP, func(valueSP MachineWord) MachineWord { return valueSP + 1 })
+			}
+			s.SetRegister(RegPC, s.Mem.Work[s.GetRegister(RegSP)])
 		},
 		),
 	}
