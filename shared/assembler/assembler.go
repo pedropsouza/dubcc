@@ -105,6 +105,8 @@ func parseAsmLine(rawLine string) (line InLine, err error) {
 		code = label
 		label = ""
 	}
+	// ignore comments
+	code, _, _ = strings.Cut(code, ";")
 	fields := strings.Fields(code)
 	if len(fields) < 1 {
 		return InLine {}, EmptyLineErr
