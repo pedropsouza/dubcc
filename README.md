@@ -13,7 +13,7 @@ Trabalho realizado na disciplina de Programação de Sistemas na Universidade Fe
 ## 🏆️ Progresso
 - [x] Máquina Virtual
 - [x] Montador
-- [ ] Processador de Macros
+- [x] Processador de Macros
 - [ ] Carregador
 - [ ] Ligador
 
