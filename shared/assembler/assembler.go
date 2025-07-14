@@ -367,9 +367,14 @@ func (info *Info) expandAndRunMacro(macro Macros, line InLine) ([]Repr, error) {
 	for _, raw := range macro.body {
 		expanded := raw
 
-		for formal, actual := range substitutions {
-			expanded = strings.ReplaceAll(expanded, formal, actual)
+		words := strings.Split(raw, " ")
+		for i, word := range words {
+			wdata, wfound := substitutions[word]
+			if wfound {
+				words[i] = wdata
+			}
 		}
+
 		parsedLine, err := parseAsmLine(expanded)
 		if err != nil {
 			return nil, err
@@ -380,6 +385,7 @@ func (info *Info) expandAndRunMacro(macro Macros, line InLine) ([]Repr, error) {
 		}
 		allReprs = append(allReprs, reprs...)
 	}
+	log.Print(allReprs)
 	return allReprs, nil
 }
 
@@ -405,5 +411,6 @@ func MakeAssembler() Info {
 			},
 		},
 		symbols: make(map[string]dubcc.MachineAddress),
+		macros:  make(map[string]Macros),
 	}
 }
