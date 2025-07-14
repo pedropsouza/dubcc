@@ -290,11 +290,14 @@ func (info *Info) handleMacro(line InLine) (reprs []Repr, err error) {
 	if line.op == "MEND" { //Aqui, toda macro foi lida e o MEND vai fechar a macro
 		info.macroLevel--
 		frame := info.macroStack[info.macroLevel]
-		info.macros[frame.name] = Macros{
+		macro := Macros{
 			args:      frame.args,
 			body:      frame.body,
 			definedAt: info.line_counter,
 		}
+
+		info.macroStack = slices.Delete(info.macroStack, info.macroLevel, info.macroLevel+1)
+		info.macros[frame.name] = macro
 		return nil, nil
 	}
 	frame := &info.macroStack[info.macroLevel-1]
