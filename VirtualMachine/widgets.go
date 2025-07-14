@@ -13,13 +13,6 @@ import (
 	"image/color"
 	"log"
 	"strings"
-	"github.com/oligo/gvcode"
-	"github.com/oligo/gvcode/addons/completion"
-	gvcolor "github.com/oligo/gvcode/color"
-	"github.com/oligo/gvcode/textstyle/decoration"
-	"github.com/oligo/gvcode/textstyle/syntax"
-	wg "github.com/oligo/gvcode/widget"
-
 )
 
 func textLayout(gtx layout.Context, th *material.Theme, title string) layout.Dimensions {
@@ -147,7 +140,7 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 func CompileCode() {
 	sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
 	assemblerInfo = assembler.MakeAssembler()
-	for _, line := range strings.Split(editor.Text(), "\n") {
+	for _, line := range strings.Split(editor.state.Text(), "\n") {
 		assemblerInfo.FirstPassString(line)
 	}
 	assemblerInfo.SecondPass()

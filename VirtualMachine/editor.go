@@ -4,16 +4,12 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"log"
+	//"log"
 	_ "net/http/pprof" // This line registers the pprof handlers
-	"os"
+	//"os"
 	"regexp"
-	"strings"
-	"unicode/utf8"
 
-	"gioui.org/app"
 	"gioui.org/font"
-	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/text"
@@ -21,11 +17,9 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/oligo/gvcode"
-	"github.com/oligo/gvcode/addons/completion"
 	gvcolor "github.com/oligo/gvcode/color"
-	"github.com/oligo/gvcode/textstyle/decoration"
 	"github.com/oligo/gvcode/textstyle/syntax"
-	wg "github.com/oligo/gvcode/widget"
+	//wg "github.com/oligo/gvcode/widget"
 )
 
 type (
@@ -43,7 +37,7 @@ const (
 	syntaxPattern = "package|import|type|func|struct|for|var|switch|case|if|else"
 )
 
-func (ed *EditorApp) layout(gtx C, th *material.Theme) D {
+func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
 	for {
 		evt, ok := ed.state.Update(gtx)
 		if !ok {
@@ -155,4 +149,3 @@ func HightlightTextByPattern(text string, pattern string) []syntax.Token {
 
 	return tokens
 }
-

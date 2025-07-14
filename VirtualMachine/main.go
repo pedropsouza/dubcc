@@ -9,22 +9,20 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"log"
-	"os"
-	"path"
 	"github.com/oligo/gvcode"
-	"github.com/oligo/gvcode/addons/completion"
 	gvcolor "github.com/oligo/gvcode/color"
 	"github.com/oligo/gvcode/textstyle/decoration"
 	"github.com/oligo/gvcode/textstyle/syntax"
 	wg "github.com/oligo/gvcode/widget"
+	"log"
+	"os"
 )
 
 var editor EditorApp
+var th *material.Theme
 var assembleBtn widget.Clickable
 var stepBtn widget.Clickable
 var resetBtn widget.Clickable
-
 
 var memCap dubcc.MachineAddress
 var sim dubcc.Sim
@@ -35,15 +33,10 @@ func main() {
 	sim = dubcc.MakeSim(memCap)
 	fmt.Println(sim)
 	InitTables(&sim)
-	execPath, err := os.Executable()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Print(execPath)
-	pathEnv := os.Getenv("PATH")
-	assemblerDir := path.Join(path.Dir(path.Dir(execPath)), "assembler")
-	os.Setenv("PATH", pathEnv+":"+assemblerDir)
-	log.Print(os.Getenv("PATH"))
+	editor = EditorApp{}
+	th = material.NewTheme()
+	editor.state = wg.NewEditor(th)
+	gvcode.SetDebug(false)
 
 	if len(os.Args) > 1 {
 		code, err := os.ReadFile(os.Args[1])
@@ -67,17 +60,8 @@ func main() {
 }
 
 func run(window *app.Window) error {
-	th := material.NewTheme()
 	var ops op.Ops
-	editor.SingleLine = false
 
-	editor := EditorApp{
-		th: th,
-	}
-	editorApp.state = wg.NewEditor(th)
-	gvcode.SetDebug(false)
-	
-	// color scheme
 	colorScheme := syntax.ColorScheme{}
 	colorScheme.Foreground = gvcolor.MakeColor(th.Fg)
 	colorScheme.SelectColor = gvcolor.MakeColor(th.ContrastBg).MulAlpha(0x60)
@@ -86,21 +70,21 @@ func run(window *app.Window) error {
 	keywordColor, _ := gvcolor.Hex2Color("#AF00DB")
 	colorScheme.AddStyle("keyword", syntax.Underline, keywordColor, gvcolor.Color{})
 
-	editorApp.state.WithOptions(
+	editor.state.WithOptions(
 		gvcode.WrapLine(false),
 		gvcode.WithLineNumber(true),
-		gvcode.WithAutoCompletion(cm),
+		//gvcode.WithAutoCompletion(cm),
 		gvcode.WithColorScheme(colorScheme),
 	)
 
-	tokens := HightlightTextByPattern(editorApp.state.Text(), syntaxPattern)
-	editorApp.state.SetSyntaxTokens(tokens...)
+	tokens := HightlightTextByPattern(editor.state.Text(), syntaxPattern)
+	editor.state.SetSyntaxTokens(tokens...)
 
 	highlightColor, _ := gvcolor.Hex2Color("#e74c3c50")
 	highlightColor2, _ := gvcolor.Hex2Color("#f1c40f50")
 	highlightColor3, _ := gvcolor.Hex2Color("#e74c3c")
 
-	editorApp.state.AddDecorations(
+	editor.state.AddDecorations(
 		decoration.Decoration{Source: "test", Start: 5, End: 150, Background: &decoration.Background{Color: highlightColor}},
 		decoration.Decoration{Source: "test", Start: 100, End: 200, Background: &decoration.Background{Color: highlightColor2}},
 		decoration.Decoration{Source: "test", Start: 100, End: 200, Squiggle: &decoration.Squiggle{Color: highlightColor3}},
