@@ -367,7 +367,6 @@ func (info *Info) expandAndRunMacro(macro Macros, line InLine) ([]Repr, error) {
 	var allReprs []Repr
 
 	for _, raw := range macro.body {
-		expanded := raw
 
 		words := strings.Split(raw, " ")
 		for i, word := range words {
@@ -376,6 +375,7 @@ func (info *Info) expandAndRunMacro(macro Macros, line InLine) ([]Repr, error) {
 				words[i] = wdata
 			}
 		}
+		expanded := strings.Join(words, " ")
 
 		parsedLine, err := parseAsmLine(expanded)
 		if err != nil {
