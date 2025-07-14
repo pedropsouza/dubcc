@@ -13,6 +13,13 @@ import (
 	"image/color"
 	"log"
 	"strings"
+	"github.com/oligo/gvcode"
+	"github.com/oligo/gvcode/addons/completion"
+	gvcolor "github.com/oligo/gvcode/color"
+	"github.com/oligo/gvcode/textstyle/decoration"
+	"github.com/oligo/gvcode/textstyle/syntax"
+	wg "github.com/oligo/gvcode/widget"
+
 )
 
 func textLayout(gtx layout.Context, th *material.Theme, title string) layout.Dimensions {
@@ -50,7 +57,7 @@ func FillWithText(gtx layout.Context, th *material.Theme, text string, bg color.
 		),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			ColorBox(gtx, gtx.Constraints.Max, bg)
-			return material.Editor(th, &editor, text).Layout(gtx)
+			return editor.Layout(gtx, th)
 		}),
 		layout.Rigid(
 			layout.Spacer{Width: unit.Dp(8)}.Layout,
