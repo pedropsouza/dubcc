@@ -7,8 +7,8 @@ import (
 	//"golang.org/x/exp/shiny/widget/theme"
 	"image"
 	"image/color"
-	"strings"
 	"slices"
+	"strings"
 
 	//"log"
 	_ "net/http/pprof" // This line registers the pprof handlers
@@ -164,12 +164,12 @@ func HighlightTextByPattern(text string) []syntax.Token {
 		regex := strings.Join(instructionNames, "|")
 
 		tokens = append(tokens,
-				applyPattern(
-					regexp.MustCompile(regex),
-					text,
-					"custom.instruction")...)
+			applyPattern(
+				regexp.MustCompile(regex),
+				text,
+				"custom.instruction")...)
 	}
-	
+
 	{ // registers
 		var registerNames []string
 		for name := range sim.Isa.Registers {
@@ -178,10 +178,10 @@ func HighlightTextByPattern(text string) []syntax.Token {
 		regex := strings.Join(registerNames, "|")
 
 		tokens = append(tokens,
-				applyPattern(
-					regexp.MustCompile(regex),
-					text,
-					"custom.register")...)
+			applyPattern(
+				regexp.MustCompile(regex),
+				text,
+				"custom.register")...)
 	}
 
 	{ // directives
@@ -192,10 +192,10 @@ func HighlightTextByPattern(text string) []syntax.Token {
 		regex := strings.Join(directiveNames, "|")
 
 		tokens = append(tokens,
-				applyPattern(
-					regexp.MustCompile(regex),
-					text,
-					"custom.directive")...)
+			applyPattern(
+				regexp.MustCompile(regex),
+				text,
+				"custom.directive")...)
 	}
 
 	slices.SortFunc(tokens, func(l, r syntax.Token) int {

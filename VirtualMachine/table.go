@@ -1,9 +1,8 @@
 package main
 
 import (
-	"fmt"
-	"strconv"
 	"dubcc"
+	"fmt"
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
@@ -11,18 +10,19 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"strconv"
 )
 
 type (
 	Table struct {
-		widget widget.List
+		widget  widget.List
 		columns []ColumnEnum
-		data []TableEntry
+		data    []TableEntry
 	}
 
 	RegisterTableEntry struct {
 		name string
-		reg *dubcc.Register
+		reg  *dubcc.Register
 	}
 	MemoryTableEntry struct {
 		address dubcc.MachineAddress
@@ -50,7 +50,8 @@ func (e *MemoryTableEntry) GetColumn(col ColumnEnum) string {
 		return strconv.FormatUint(uint64(sim.Mem.Work[e.address]), 10)
 	case ColumnBinaryValue:
 		return fmt.Sprintf("%016b", sim.Mem.Work[e.address])
-	default: return "n/a"
+	default:
+		return "n/a"
 	}
 }
 
@@ -63,24 +64,25 @@ func (e *RegisterTableEntry) GetColumn(col ColumnEnum) string {
 		return strconv.FormatUint(uint64(val), 10)
 	case ColumnBinaryValue:
 		return fmt.Sprintf("%b", val)
-	default: return "n/a"
+	default:
+		return "n/a"
 	}
 }
 
 var (
-	tableMemory = Table {
-		widget: widget.List{List: layout.List{Axis: layout.Vertical}},
-		columns: []ColumnEnum { ColumnAddress, ColumnValue, ColumnBinaryValue },
+	tableMemory = Table{
+		widget:  widget.List{List: layout.List{Axis: layout.Vertical}},
+		columns: []ColumnEnum{ColumnAddress, ColumnValue, ColumnBinaryValue},
 	}
-	tableRegisters = Table {
-		widget: widget.List{List: layout.List{Axis: layout.Vertical}},
-		columns: []ColumnEnum { ColumnName, ColumnValue },
+	tableRegisters = Table{
+		widget:  widget.List{List: layout.List{Axis: layout.Vertical}},
+		columns: []ColumnEnum{ColumnName, ColumnValue},
 	}
 
-	tableColumnNames = map[ColumnEnum]string {
-		ColumnName: "Nome",
-		ColumnAddress: "Endereço",
-		ColumnValue: "Valor",
+	tableColumnNames = map[ColumnEnum]string{
+		ColumnName:        "Nome",
+		ColumnAddress:     "Endereço",
+		ColumnValue:       "Valor",
 		ColumnBinaryValue: "Binário",
 	}
 )
@@ -108,7 +110,7 @@ func drawCell(gtx layout.Context, th *material.Theme, text string, weight font.W
 }
 
 func (tbl *Table) Draw(gtx layout.Context, th *material.Theme, colWeights []float32) layout.Dimensions {
-	return material.List(th, &tbl.widget).Layout(gtx, len(tbl.data) + 1, func(gtx layout.Context, i int) layout.Dimensions {
+	return material.List(th, &tbl.widget).Layout(gtx, len(tbl.data)+1, func(gtx layout.Context, i int) layout.Dimensions {
 		rowBg := white
 
 		if i > 0 && i%2 != 0 {
@@ -147,13 +149,13 @@ func InitTables(sim *dubcc.Sim) {
 	for name, reg := range sim.Isa.Registers {
 		tableRegisters.data = append(
 			tableRegisters.data,
-			&RegisterTableEntry { name, reg },
+			&RegisterTableEntry{name, reg},
 		)
 	}
 	for idx := range sim.Mem.Work {
 		tableMemory.data = append(
 			tableMemory.data,
-			&MemoryTableEntry { dubcc.MachineAddress(idx) },
+			&MemoryTableEntry{dubcc.MachineAddress(idx)},
 		)
 	}
 }

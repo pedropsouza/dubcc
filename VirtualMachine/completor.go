@@ -1,9 +1,10 @@
 package main
+
 import (
-	"unicode/utf8"
-	"strings"
-	"github.com/oligo/gvcode"
 	"gioui.org/io/key"
+	"github.com/oligo/gvcode"
+	"strings"
+	"unicode/utf8"
 )
 
 type AsmCompletor struct {
