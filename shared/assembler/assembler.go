@@ -429,5 +429,13 @@ func Directives() map[string]DirectiveHandler {
 			},
 			numArgs: 1,
 		},
+		"MACRO": {
+			f:       func(info *Info, line InLine) {},
+			numArgs: 0,
+		},
+		"MEND": {
+			f:       func(info *Info, line InLine) {},
+			numArgs: 0,
+		},
 	}
 }

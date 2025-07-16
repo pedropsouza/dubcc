@@ -3,14 +3,13 @@ package main
 import (
 	"dubcc/assembler"
 	"fmt"
+	"hash/crc32"
 	"image"
 	"image/color"
 	"slices"
 	"strings"
 	"time"
-	"hash/crc32"
 
-	_ "net/http/pprof" // This line registers the pprof handlers
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -21,6 +20,7 @@ import (
 	"github.com/oligo/gvcode"
 	gvcolor "github.com/oligo/gvcode/color"
 	"github.com/oligo/gvcode/textstyle/syntax"
+	_ "net/http/pprof" // This line registers the pprof handlers
 	"regexp"
 )
 
@@ -37,6 +37,7 @@ type EditorApp struct {
 
 var lastEditTime time.Time
 var lastAnalysisHash uint32
+
 func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
 	hash := crc32.ChecksumIEEE([]byte(editor.state.Text()))
 	for {
@@ -54,7 +55,7 @@ func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
 		}
 
 		// has the code settled?
-    if hash != lastAnalysisHash && time.Since(lastEditTime) > time.Second*1 {
+		if hash != lastAnalysisHash && time.Since(lastEditTime) > time.Second*1 {
 			assemblerSingleton = assembler.MakeAssembler()
 			for line := range strings.SplitSeq(editor.state.Text(), "\n") {
 				assemblerSingleton.FirstPassString(line)
@@ -154,10 +155,12 @@ func createCustomColorScheme(th *material.Theme) syntax.ColorScheme {
 	colorInstruction, _ := gvcolor.Hex2Color("#61AFEF")
 	colorDirective, _ := gvcolor.Hex2Color("#C678DD")
 	colorRegister, _ := gvcolor.Hex2Color("#98C379")
+	colorComment, _ := gvcolor.Hex2Color("#808080")
 
 	scheme.AddStyle("custom.instruction", 0, colorInstruction, gvcolor.Color{})
 	scheme.AddStyle("custom.directive", 0, colorDirective, gvcolor.Color{})
 	scheme.AddStyle("custom.register", 0, colorRegister, gvcolor.Color{})
+	scheme.AddStyle("custom.comment", syntax.Italic, colorComment, gvcolor.Color{})
 
 	return scheme
 }
@@ -205,6 +208,14 @@ func HighlightTextByPattern(text string) []syntax.Token {
 				regexp.MustCompile(regex),
 				text,
 				"custom.directive")...)
+	}
+	{ //Comments
+		tokens = append(tokens,
+			applyPattern(
+				regexp.MustCompile("^.*(;.*$)"),
+				text,
+				"custom.comment")...)
+
 	}
 
 	slices.SortFunc(tokens, func(l, r syntax.Token) int {
