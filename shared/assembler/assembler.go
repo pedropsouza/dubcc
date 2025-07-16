@@ -397,25 +397,29 @@ func (info *Info) expandAndRunMacro(macro Macros, line InLine) ([]Repr, error) {
 func MakeAssembler() Info {
 	return Info{
 		isa: dubcc.GetDefaultISA(),
-		directives: map[string]DirectiveHandler{ //TODO Jogar isso pra fora do MakeAssembler e adicionar as outras.
-			"space": DirectiveHandler{
-				f: func(info *Info, line InLine) {
-					info.registerConst(line.label, 0)
-				},
-				numArgs: 0,
-			},
-			"const": DirectiveHandler{
-				f: func(info *Info, line InLine) {
-					num, err := parseNum(line.args[0])
-					if err != nil {
-						log.Fatalf("can't decide value for const %v: %v", line.label, err)
-					}
-					info.registerConst(line.label, dubcc.MachineWord(num))
-				},
-				numArgs: 1,
-			},
-		},
+		directives: Directives(),
 		symbols: make(map[string]dubcc.MachineAddress),
 		macros:  make(map[string]Macros),
+	}
+}
+
+func Directives() map[string]DirectiveHandler {
+	return map[string]DirectiveHandler{ //TODO adicionar as outras.
+		"space": {
+			f: func(info *Info, line InLine) {
+				info.registerConst(line.label, 0)
+			},
+			numArgs: 0,
+		},
+		"const": {
+			f: func(info *Info, line InLine) {
+				num, err := parseNum(line.args[0])
+				if err != nil {
+					log.Fatalf("can't decide value for const %v: %v", line.label, err)
+				}
+				info.registerConst(line.label, dubcc.MachineWord(num))
+			},
+			numArgs: 1,
+		},
 	}
 }
