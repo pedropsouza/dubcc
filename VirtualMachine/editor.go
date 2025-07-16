@@ -38,10 +38,9 @@ type EditorApp struct {
 }
 
 const (
-	syntaxPattern      = "package|import|type|func|struct|for|var|switch|case|if|else"
-	instructionPattern = "add|br|brneg|brpos|brzero|call|copy|divide|load|mult|push|pop|read|ret|stop|store|sub|write"
+	instructionPattern = "add|brneg|brpos|brzero|br|call|copy|divide|load|mult|push|pop|read|ret|stop|store|sub|write"
 	registerPattern    = "R0|R1|RE|RI|ACC|PC|MOP|SP"
-	directivesPattern  = " space | const "
+	directivesPattern  = "space|const|MACRO|MEND"
 ) //FIXME: FIX THIS SHITASS CODE PLS, I DON'T KNOW HOW TO
 
 func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
@@ -52,10 +51,9 @@ func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
 		}
 
 		switch evt.(type) {
-		/*case gvcode.ChangeEvent:
-		tokens := HightlightTextByPattern(ed.state.Text(), syntaxPattern)
-		ed.state.SetSyntaxTokens(tokens...)
-		*/
+		case gvcode.ChangeEvent:
+			tokens := HighlightTextByPattern(editor.state.Text())
+			ed.state.SetSyntaxTokens(tokens...)
 		}
 
 	}
@@ -153,25 +151,27 @@ func createCustomColorScheme(th *material.Theme) syntax.ColorScheme {
 	colorDirective, _ := gvcolor.Hex2Color("#C678DD")
 	colorRegister, _ := gvcolor.Hex2Color("#98C379")
 
-	scheme.AddStyle("custom.instruction", syntax.Underline, colorInstruction, gvcolor.Color{})
-	scheme.AddStyle("custom.directive", syntax.Underline, colorDirective, gvcolor.Color{})
-	scheme.AddStyle("custom.register", syntax.Underline, colorRegister, gvcolor.Color{})
+	scheme.AddStyle("custom.instruction", 0, colorInstruction, gvcolor.Color{})
+	scheme.AddStyle("custom.directive", 0, colorDirective, gvcolor.Color{})
+	scheme.AddStyle("custom.register", 0, colorRegister, gvcolor.Color{})
 
 	return scheme
 }
 
-func HightlightTextByPattern(text string) []syntax.Token {
+func HighlightTextByPattern(text string) []syntax.Token {
 	var tokens []syntax.Token
 
 	instructionsNamesRegex := regexp.MustCompile(instructionPattern) //FIXME: Need to be generic for all incoming dir, inst...
 	directivesNamesRegex := regexp.MustCompile(directivesPattern)
 	registersNamesRegex := regexp.MustCompile(registerPattern)
-	syntaxPatternRegex := regexp.MustCompile(syntaxPattern)
 
-	tokens = append(tokens, applyPattern(instructionsNamesRegex, text, "custom.instruction")...)
-	tokens = append(tokens, applyPattern(directivesNamesRegex, text, "custom.directive")...)
-	tokens = append(tokens, applyPattern(registersNamesRegex, text, "custom.register")...)
-	tokens = append(tokens, applyPattern(syntaxPatternRegex, text, "custom.register")...)
+	addTokens := func(re *regexp.Regexp, scope string) {
+		tokens = append(tokens, applyPattern(re, text, syntax.StyleScope(scope))...)
+	}
+
+	addTokens(instructionsNamesRegex, "custom.instruction")
+	addTokens(registersNamesRegex, "custom.directive")
+	addTokens(directivesNamesRegex, "custom.register")
 
 	return tokens
 }

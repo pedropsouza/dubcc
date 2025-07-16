@@ -68,7 +68,7 @@ func run(window *app.Window) error {
 		gvcode.WithColorScheme(customScheme),
 	)
 
-	tokens := HightlightTextByPattern(editor.state.Text())
+	tokens := HighlightTextByPattern(editor.state.Text())
 	editor.state.SetSyntaxTokens(tokens...)
 	editor.state.SetText(editor.state.Text())
 
