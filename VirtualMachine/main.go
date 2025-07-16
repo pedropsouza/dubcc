@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"gioui.org/app"
 	"gioui.org/op"
+	"gioui.org/unit"
 	"gioui.org/op/paint"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/oligo/gvcode"
 	wg "github.com/oligo/gvcode/widget"
+	"github.com/oligo/gvcode/addons/completion"
 	"log"
 	"os"
 )
@@ -60,11 +62,21 @@ func run(window *app.Window) error {
 	var ops op.Ops
 
 	customScheme := createCustomColorScheme(th)
+	
+	// Setting up auto-completion.
+	cm := &completion.DefaultCompletion{Editor: editor.state}
+
+	// set popup widget to let user navigate the candidates.
+	popup := completion.NewCompletionPopup(editor.state, cm)
+	popup.Theme = th
+	popup.TextSize = unit.Sp(12)
+
+	cm.AddCompletor(&AsmCompletor{editor: editor.state}, popup)
 
 	editor.state.WithOptions(
 		gvcode.WrapLine(false),
 		gvcode.WithLineNumber(true),
-		//gvcode.WithAutoCompletion(cm),
+		gvcode.WithAutoCompletion(cm),
 		gvcode.WithColorScheme(customScheme),
 	)
 
@@ -72,7 +84,7 @@ func run(window *app.Window) error {
 	editor.state.SetSyntaxTokens(tokens...)
 	editor.state.SetText(editor.state.Text())
 
-	/*editor.state.AddDecorations(
+		/*editor.state.AddDecorations(
 		decoration.Decoration{Source: "test", Start: 5, End: 150, Background: &decoration.Background{Color: highlightColor}},
 		decoration.Decoration{Source: "test", Start: 100, End: 200, Background: &decoration.Background{Color: highlightColor2}},
 		decoration.Decoration{Source: "test", Start: 100, End: 200, Squiggle: &decoration.Squiggle{Color: highlightColor3}},
