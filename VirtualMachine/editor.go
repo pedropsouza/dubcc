@@ -1,14 +1,17 @@
 package main
 
 import (
+	//"dubcc/assembler"
 	"fmt"
+	//"go/types"
+	//"golang.org/x/exp/shiny/widget/theme"
 	"image"
 	"image/color"
+	//"strings"
+
 	//"log"
 	_ "net/http/pprof" // This line registers the pprof handlers
 	//"os"
-	"regexp"
-
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -19,6 +22,7 @@ import (
 	"github.com/oligo/gvcode"
 	gvcolor "github.com/oligo/gvcode/color"
 	"github.com/oligo/gvcode/textstyle/syntax"
+	"regexp"
 	//wg "github.com/oligo/gvcode/widget"
 )
 
@@ -34,8 +38,11 @@ type EditorApp struct {
 }
 
 const (
-	syntaxPattern = "package|import|type|func|struct|for|var|switch|case|if|else"
-)
+	syntaxPattern      = "package|import|type|func|struct|for|var|switch|case|if|else"
+	instructionPattern = "add|br|brneg|brpos|brzero|call|copy|divide|load|mult|push|pop|read|ret|stop|store|sub|write"
+	registerPattern    = "R0|R1|RE|RI|ACC|PC|MOP|SP"
+	directivesPattern  = " space | const "
+) //FIXME: FIX THIS SHITASS CODE PLS, I DON'T KNOW HOW TO
 
 func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
 	for {
@@ -45,10 +52,12 @@ func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
 		}
 
 		switch evt.(type) {
-		case gvcode.ChangeEvent:
-			tokens := HightlightTextByPattern(ed.state.Text(), syntaxPattern)
-			ed.state.SetSyntaxTokens(tokens...)
+		/*case gvcode.ChangeEvent:
+		tokens := HightlightTextByPattern(ed.state.Text(), syntaxPattern)
+		ed.state.SetSyntaxTokens(tokens...)
+		*/
 		}
+
 	}
 
 	xScrollDist := ed.xScroll.ScrollDistance()
@@ -133,19 +142,48 @@ func makeScrollbar(th *material.Theme, scroll *widget.Scrollbar, color color.NRG
 	bar.Track.MinorPadding = unit.Dp(1)
 	return bar
 }
+func createCustomColorScheme(th *material.Theme) syntax.ColorScheme {
+	scheme := syntax.ColorScheme{}
+	scheme.Foreground = gvcolor.MakeColor(th.Fg)
+	scheme.SelectColor = gvcolor.MakeColor(th.ContrastBg).MulAlpha(0x60)
+	scheme.LineColor = gvcolor.MakeColor(th.ContrastBg).MulAlpha(0x30)
+	scheme.LineNumberColor = gvcolor.MakeColor(th.ContrastBg).MulAlpha(0xb6)
 
-func HightlightTextByPattern(text string, pattern string) []syntax.Token {
+	colorInstruction, _ := gvcolor.Hex2Color("#61AFEF")
+	colorDirective, _ := gvcolor.Hex2Color("#C678DD")
+	colorRegister, _ := gvcolor.Hex2Color("#98C379")
+
+	scheme.AddStyle("custom.instruction", syntax.Underline, colorInstruction, gvcolor.Color{})
+	scheme.AddStyle("custom.directive", syntax.Underline, colorDirective, gvcolor.Color{})
+	scheme.AddStyle("custom.register", syntax.Underline, colorRegister, gvcolor.Color{})
+
+	return scheme
+}
+
+func HightlightTextByPattern(text string) []syntax.Token {
 	var tokens []syntax.Token
 
-	re := regexp.MustCompile(pattern)
-	matches := re.FindAllIndex([]byte(text), -1)
-	for _, match := range matches {
+	instructionsNamesRegex := regexp.MustCompile(instructionPattern) //FIXME: Need to be generic for all incoming dir, inst...
+	directivesNamesRegex := regexp.MustCompile(directivesPattern)
+	registersNamesRegex := regexp.MustCompile(registerPattern)
+	syntaxPatternRegex := regexp.MustCompile(syntaxPattern)
+
+	tokens = append(tokens, applyPattern(instructionsNamesRegex, text, "custom.instruction")...)
+	tokens = append(tokens, applyPattern(directivesNamesRegex, text, "custom.directive")...)
+	tokens = append(tokens, applyPattern(registersNamesRegex, text, "custom.register")...)
+	tokens = append(tokens, applyPattern(syntaxPatternRegex, text, "custom.register")...)
+
+	return tokens
+}
+
+func applyPattern(re *regexp.Regexp, text string, scope syntax.StyleScope) []syntax.Token {
+	var tokens []syntax.Token
+	for _, match := range re.FindAllStringIndex(text, -1) {
 		tokens = append(tokens, syntax.Token{
 			Start: match[0],
 			End:   match[1],
-			Scope: "keyword",
+			Scope: scope,
 		})
 	}
-
 	return tokens
 }

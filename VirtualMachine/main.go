@@ -10,9 +10,6 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/oligo/gvcode"
-	gvcolor "github.com/oligo/gvcode/color"
-	"github.com/oligo/gvcode/textstyle/decoration"
-	"github.com/oligo/gvcode/textstyle/syntax"
 	wg "github.com/oligo/gvcode/widget"
 	"log"
 	"os"
@@ -49,7 +46,7 @@ func main() {
 
 	go func() {
 		window := new(app.Window)
-		window.Option(app.Title("dobam unka bee compiler collection (speed racer)"))
+		window.Option(app.Title("Dobam Unka Bee Compiler Collection"))
 
 		if err := run(window); err != nil {
 			log.Fatal(err)
@@ -62,34 +59,25 @@ func main() {
 func run(window *app.Window) error {
 	var ops op.Ops
 
-	colorScheme := syntax.ColorScheme{}
-	colorScheme.Foreground = gvcolor.MakeColor(th.Fg)
-	colorScheme.SelectColor = gvcolor.MakeColor(th.ContrastBg).MulAlpha(0x60)
-	colorScheme.LineColor = gvcolor.MakeColor(th.ContrastBg).MulAlpha(0x30)
-	colorScheme.LineNumberColor = gvcolor.MakeColor(th.ContrastBg).MulAlpha(0xb6)
-	keywordColor, _ := gvcolor.Hex2Color("#AF00DB")
-	colorScheme.AddStyle("keyword", syntax.Underline, keywordColor, gvcolor.Color{})
+	customScheme := createCustomColorScheme(th)
 
 	editor.state.WithOptions(
 		gvcode.WrapLine(false),
 		gvcode.WithLineNumber(true),
 		//gvcode.WithAutoCompletion(cm),
-		gvcode.WithColorScheme(colorScheme),
+		gvcode.WithColorScheme(customScheme),
 	)
 
-	tokens := HightlightTextByPattern(editor.state.Text(), syntaxPattern)
+	tokens := HightlightTextByPattern(editor.state.Text())
 	editor.state.SetSyntaxTokens(tokens...)
+	editor.state.SetText(editor.state.Text())
 
-	highlightColor, _ := gvcolor.Hex2Color("#e74c3c50")
-	highlightColor2, _ := gvcolor.Hex2Color("#f1c40f50")
-	highlightColor3, _ := gvcolor.Hex2Color("#e74c3c")
-
-	editor.state.AddDecorations(
+	/*editor.state.AddDecorations(
 		decoration.Decoration{Source: "test", Start: 5, End: 150, Background: &decoration.Background{Color: highlightColor}},
 		decoration.Decoration{Source: "test", Start: 100, End: 200, Background: &decoration.Background{Color: highlightColor2}},
 		decoration.Decoration{Source: "test", Start: 100, End: 200, Squiggle: &decoration.Squiggle{Color: highlightColor3}},
 		decoration.Decoration{Source: "test", Start: 250, End: 400, Strikethrough: &decoration.Strikethrough{Color: highlightColor3}},
-	)
+	)*/
 
 	for {
 		event := window.Event()
