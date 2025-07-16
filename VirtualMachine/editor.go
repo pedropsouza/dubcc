@@ -2,16 +2,22 @@ package main
 
 import (
 	//"dubcc/assembler"
+	"dubcc/assembler"
 	"fmt"
+	"strings"
+
 	//"go/types"
 	//"golang.org/x/exp/shiny/widget/theme"
 	"image"
 	"image/color"
+
 	//"strings"
 
 	//"log"
 	_ "net/http/pprof" // This line registers the pprof handlers
 	//"os"
+	"regexp"
+
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -22,7 +28,6 @@ import (
 	"github.com/oligo/gvcode"
 	gvcolor "github.com/oligo/gvcode/color"
 	"github.com/oligo/gvcode/textstyle/syntax"
-	"regexp"
 	//wg "github.com/oligo/gvcode/widget"
 )
 
@@ -36,13 +41,6 @@ type EditorApp struct {
 	xScroll widget.Scrollbar
 	yScroll widget.Scrollbar
 }
-
-const (
-	syntaxPattern      = "package|import|type|func|struct|for|var|switch|case|if|else"
-	instructionPattern = "add|br|brneg|brpos|brzero|call|copy|divide|load|mult|push|pop|read|ret|stop|store|sub|write"
-	registerPattern    = "R0|R1|RE|RI|ACC|PC|MOP|SP"
-	directivesPattern  = " space | const "
-) //FIXME: FIX THIS SHITASS CODE PLS, I DON'T KNOW HOW TO
 
 func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
 	for {
@@ -163,15 +161,47 @@ func createCustomColorScheme(th *material.Theme) syntax.ColorScheme {
 func HightlightTextByPattern(text string) []syntax.Token {
 	var tokens []syntax.Token
 
-	instructionsNamesRegex := regexp.MustCompile(instructionPattern) //FIXME: Need to be generic for all incoming dir, inst...
-	directivesNamesRegex := regexp.MustCompile(directivesPattern)
-	registersNamesRegex := regexp.MustCompile(registerPattern)
-	syntaxPatternRegex := regexp.MustCompile(syntaxPattern)
+	{ // instructions
+		var instructionNames []string
+		for name := range sim.Isa.Instructions {
+			instructionNames = append(instructionNames, name)
+		}
+		regex := strings.Join(instructionNames, "|")
 
-	tokens = append(tokens, applyPattern(instructionsNamesRegex, text, "custom.instruction")...)
-	tokens = append(tokens, applyPattern(directivesNamesRegex, text, "custom.directive")...)
-	tokens = append(tokens, applyPattern(registersNamesRegex, text, "custom.register")...)
-	tokens = append(tokens, applyPattern(syntaxPatternRegex, text, "custom.register")...)
+		tokens = append(tokens,
+				applyPattern(
+					regexp.MustCompile(regex),
+					text,
+					"custom.instruction")...)
+	}
+	
+	{ // registers
+		var registerNames []string
+		for name := range sim.Isa.Registers {
+			registerNames = append(registerNames, name)
+		}
+		regex := strings.Join(registerNames, "|")
+
+		tokens = append(tokens,
+				applyPattern(
+					regexp.MustCompile(regex),
+					text,
+					"custom.register")...)
+	}
+
+	{ // directives
+		var directiveNames []string
+		for name := range assembler.Directives() {
+			directiveNames = append(directiveNames, name)
+		}
+		regex := strings.Join(directiveNames, "|")
+
+		tokens = append(tokens,
+				applyPattern(
+					regexp.MustCompile(regex),
+					text,
+					"custom.directive")...)
+	}
 
 	return tokens
 }
