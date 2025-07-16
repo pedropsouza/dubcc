@@ -1,13 +1,14 @@
 package main
 
 import (
-	//"dubcc/assembler"
+	"dubcc/assembler"
 	"fmt"
 	//"go/types"
 	//"golang.org/x/exp/shiny/widget/theme"
 	"image"
 	"image/color"
-	//"strings"
+	"strings"
+	"slices"
 
 	//"log"
 	_ "net/http/pprof" // This line registers the pprof handlers
@@ -36,12 +37,6 @@ type EditorApp struct {
 	xScroll widget.Scrollbar
 	yScroll widget.Scrollbar
 }
-
-const (
-	instructionPattern = "add|brneg|brpos|brzero|br|call|copy|divide|load|mult|push|pop|read|ret|stop|store|sub|write"
-	registerPattern    = "R0|R1|RE|RI|ACC|PC|MOP|SP"
-	directivesPattern  = "space|const|MACRO|MEND"
-) //FIXME: FIX THIS SHITASS CODE PLS, I DON'T KNOW HOW TO
 
 func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
 	for {
@@ -161,17 +156,53 @@ func createCustomColorScheme(th *material.Theme) syntax.ColorScheme {
 func HighlightTextByPattern(text string) []syntax.Token {
 	var tokens []syntax.Token
 
-	instructionsNamesRegex := regexp.MustCompile(instructionPattern) //FIXME: Need to be generic for all incoming dir, inst...
-	directivesNamesRegex := regexp.MustCompile(directivesPattern)
-	registersNamesRegex := regexp.MustCompile(registerPattern)
+	{ // instructions
+		var instructionNames []string
+		for name := range sim.Isa.Instructions {
+			instructionNames = append(instructionNames, name)
+		}
+		regex := strings.Join(instructionNames, "|")
 
-	addTokens := func(re *regexp.Regexp, scope string) {
-		tokens = append(tokens, applyPattern(re, text, syntax.StyleScope(scope))...)
+		tokens = append(tokens,
+				applyPattern(
+					regexp.MustCompile(regex),
+					text,
+					"custom.instruction")...)
+	}
+	
+	{ // registers
+		var registerNames []string
+		for name := range sim.Isa.Registers {
+			registerNames = append(registerNames, name)
+		}
+		regex := strings.Join(registerNames, "|")
+
+		tokens = append(tokens,
+				applyPattern(
+					regexp.MustCompile(regex),
+					text,
+					"custom.register")...)
 	}
 
-	addTokens(instructionsNamesRegex, "custom.instruction")
-	addTokens(registersNamesRegex, "custom.directive")
-	addTokens(directivesNamesRegex, "custom.register")
+	{ // directives
+		var directiveNames []string
+		for name := range assembler.Directives() {
+			directiveNames = append(directiveNames, name)
+		}
+		regex := strings.Join(directiveNames, "|")
+
+		tokens = append(tokens,
+				applyPattern(
+					regexp.MustCompile(regex),
+					text,
+					"custom.directive")...)
+	}
+
+	slices.SortFunc(tokens, func(l, r syntax.Token) int {
+		comesFirstOrder := l.Start - r.Start
+		longerOrder := (l.End - l.Start) - (r.End - r.Start)
+		return 2*comesFirstOrder + longerOrder
+	})
 
 	return tokens
 }
