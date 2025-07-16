@@ -25,11 +25,13 @@ var resetBtn widget.Clickable
 
 var memCap dubcc.MachineAddress
 var sim dubcc.Sim
+var assemblerSingleton assembler.Info
 var assemblerInfo assembler.Info
 
 func main() {
 	memCap = dubcc.MachineAddress(1 << 6)
 	sim = dubcc.MakeSim(memCap)
+	assemblerSingleton = assembler.MakeAssembler()
 	fmt.Println(sim)
 	InitTables(&sim)
 	editor = EditorApp{}

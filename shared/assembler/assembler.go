@@ -349,12 +349,12 @@ func (info *Info) registerLabel(name string) {
 	info.registerLabelAt(name, info.line_counter)
 }
 
-func (info *Info) GetLabel() []string {
-	var labels []string
+func (info *Info) GetSymbols() []string {
+	var syms []string
 	for sym := range info.symbols {
-		labels = append(labels, sym)
+		syms = append(syms, sym)
 	}
-	return labels
+	return syms
 }
 
 func (info *Info) registerConst(name string, val dubcc.MachineWord) {

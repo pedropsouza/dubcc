@@ -3,16 +3,13 @@ package main
 import (
 	"dubcc/assembler"
 	"fmt"
-	//"go/types"
-	//"golang.org/x/exp/shiny/widget/theme"
 	"image"
 	"image/color"
 	"slices"
 	"strings"
+	"time"
 
-	//"log"
 	_ "net/http/pprof" // This line registers the pprof handlers
-	//"os"
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -24,7 +21,6 @@ import (
 	gvcolor "github.com/oligo/gvcode/color"
 	"github.com/oligo/gvcode/textstyle/syntax"
 	"regexp"
-	//wg "github.com/oligo/gvcode/widget"
 )
 
 type (
@@ -49,8 +45,20 @@ func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
 		case gvcode.ChangeEvent:
 			tokens := HighlightTextByPattern(editor.state.Text())
 			ed.state.SetSyntaxTokens(tokens...)
+			// Create a goroutine that checks if the text hasn't changed in a while
+			// and calls the first pass if so
+			go func () {
+				lastLen := editor.state.Len()
+				time.Sleep(2*time.Second)
+				if lastLen == editor.state.Len() {
+					// settled some
+					assemblerSingleton = assembler.MakeAssembler()
+					for _, line := range strings.Split(editor.state.Text(), "\n") {
+						assemblerSingleton.FirstPassString(line)
+					}
+				}
+			}()
 		}
-
 	}
 
 	xScrollDist := ed.xScroll.ScrollDistance()

@@ -88,24 +88,22 @@ func (c *AsmCompletor) Suggest(ctx gvcode.CompletionContext) []gvcode.Completion
 			})
 		}
 	}
-	/*
-		labels := assembler.Info.GetLabel() //Phew, something is really wrong here eh
-		for _, label := range labels { //Labels
-			if strings.Contains(label, prefix) {
-				candidates = append(candidates, gvcode.CompletionCandidate{
-					Label: label,
-					TextEdit: gvcode.TextEdit{
-						NewText: label,
-						EditRange: gvcode.EditRange{
-							Start: gvcode.Position{Runes: ctx.Position.Runes - utf8.RuneCountInString(prefix)},
-							End:   gvcode.Position{Runes: ctx.Position.Runes},
-						},
+	syms := assemblerSingleton.GetSymbols()
+	for _, sym := range syms { //Symbols
+		if strings.Contains(sym, prefix) {
+			candidates = append(candidates, gvcode.CompletionCandidate{
+				Label: sym,
+				TextEdit: gvcode.TextEdit{
+					NewText: sym,
+					EditRange: gvcode.EditRange{
+						Start: gvcode.Position{Runes: ctx.Position.Runes - utf8.RuneCountInString(prefix)},
+						End:   gvcode.Position{Runes: ctx.Position.Runes},
 					},
-					Description: label,
-					Kind:        "Label",
-				})
-			}
+				},
+				Description: sym,
+				Kind:        "Symbol",
+			})
 		}
-	*/
+	}
 	return candidates
 }
