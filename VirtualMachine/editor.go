@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"hash/crc32"
 
 	_ "net/http/pprof" // This line registers the pprof handlers
 	"gioui.org/font"
@@ -34,7 +35,10 @@ type EditorApp struct {
 	yScroll widget.Scrollbar
 }
 
+var lastEditTime time.Time
+var lastAnalysisHash uint32
 func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
+	hash := crc32.ChecksumIEEE([]byte(editor.state.Text()))
 	for {
 		evt, ok := ed.state.Update(gtx)
 		if !ok {
@@ -45,19 +49,17 @@ func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
 		case gvcode.ChangeEvent:
 			tokens := HighlightTextByPattern(editor.state.Text())
 			ed.state.SetSyntaxTokens(tokens...)
-			// Create a goroutine that checks if the text hasn't changed in a while
-			// and calls the first pass if so
-			go func () {
-				lastLen := editor.state.Len()
-				time.Sleep(2*time.Second)
-				if lastLen == editor.state.Len() {
-					// settled some
-					assemblerSingleton = assembler.MakeAssembler()
-					for _, line := range strings.Split(editor.state.Text(), "\n") {
-						assemblerSingleton.FirstPassString(line)
-					}
-				}
-			}()
+			// set last edit time
+			lastEditTime = time.Now()
+		}
+
+		// has the code settled?
+    if hash != lastAnalysisHash && time.Since(lastEditTime) > time.Second*1 {
+			assemblerSingleton = assembler.MakeAssembler()
+			for line := range strings.SplitSeq(editor.state.Text(), "\n") {
+				assemblerSingleton.FirstPassString(line)
+			}
+			lastAnalysisHash = hash
 		}
 	}
 
@@ -66,7 +68,6 @@ func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
 	if xScrollDist != 0.0 || yScrollDist != 0.0 {
 		ed.state.Scroll(gtx, xScrollDist, yScrollDist)
 	}
-
 	scrollIndicatorColor := gvcolor.MakeColor(th.Fg).MulAlpha(0x30)
 
 	return layout.Flex{

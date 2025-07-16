@@ -17,6 +17,7 @@ import (
 	"os"
 )
 
+var window *app.Window
 var editor EditorApp
 var th *material.Theme
 var assembleBtn widget.Clickable
@@ -49,7 +50,7 @@ func main() {
 	}
 
 	go func() {
-		window := new(app.Window)
+		window = new(app.Window)
 		window.Option(app.Title("Dobam Unka Bee Compiler Collection"))
 
 		if err := run(window); err != nil {

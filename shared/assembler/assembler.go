@@ -194,7 +194,7 @@ func (info *Info) FirstPass(line InLine) ([]Repr, error) {
 		return nil, errors.New("End of macro before start.")
 	}
 
-	log.Fatal("Invalid operation: %v", line.op)
+	log.Printf("Warning: Invalid operation: %v", line.op)
 	return nil, nil
 
 }
