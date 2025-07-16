@@ -1,6 +1,7 @@
 package main
 
 import (
+	"dubcc/assembler"
 	"gioui.org/io/key"
 	"github.com/oligo/gvcode"
 	"strings"
@@ -36,10 +37,10 @@ func (c *AsmCompletor) Trigger() gvcode.Trigger {
 
 func (c *AsmCompletor) Suggest(ctx gvcode.CompletionContext) []gvcode.CompletionCandidate {
 	prefix := c.editor.ReadUntil(-1, isSymbolSeperator)
-	candicates := make([]gvcode.CompletionCandidate, 0)
-	for kw, instruction := range sim.Isa.Instructions {
+	candidates := make([]gvcode.CompletionCandidate, 0)
+	for kw, instruction := range sim.Isa.Instructions { //Instruction
 		if strings.Contains(kw, prefix) {
-			candicates = append(candicates, gvcode.CompletionCandidate{
+			candidates = append(candidates, gvcode.CompletionCandidate{
 				Label: kw,
 				TextEdit: gvcode.TextEdit{
 					NewText: kw,
@@ -49,10 +50,62 @@ func (c *AsmCompletor) Suggest(ctx gvcode.CompletionContext) []gvcode.Completion
 					},
 				},
 				Description: instruction.Name,
-				Kind:        "instruction",
+				Kind:        "Instruction",
 			})
 		}
 	}
 
-	return candicates
+	for kw, register := range sim.Isa.Registers { //Register
+		if strings.Contains(kw, prefix) {
+			candidates = append(candidates, gvcode.CompletionCandidate{
+				Label: kw,
+				TextEdit: gvcode.TextEdit{
+					NewText: kw,
+					EditRange: gvcode.EditRange{
+						Start: gvcode.Position{Runes: ctx.Position.Runes - utf8.RuneCountInString(prefix)},
+						End:   gvcode.Position{Runes: ctx.Position.Runes},
+					},
+				},
+				Description: register.Name,
+				Kind:        "Register",
+			})
+		}
+	}
+
+	for kw := range assembler.Directives() { //Directives
+		if strings.Contains(kw, prefix) {
+			candidates = append(candidates, gvcode.CompletionCandidate{
+				Label: kw,
+				TextEdit: gvcode.TextEdit{
+					NewText: kw,
+					EditRange: gvcode.EditRange{
+						Start: gvcode.Position{Runes: ctx.Position.Runes - utf8.RuneCountInString(prefix)},
+						End:   gvcode.Position{Runes: ctx.Position.Runes},
+					},
+				},
+				Description: kw,
+				Kind:        "Directive",
+			})
+		}
+	}
+	/*
+		labels := assembler.Info.GetLabel() //Phew, something is really wrong here eh
+		for _, label := range labels { //Labels
+			if strings.Contains(label, prefix) {
+				candidates = append(candidates, gvcode.CompletionCandidate{
+					Label: label,
+					TextEdit: gvcode.TextEdit{
+						NewText: label,
+						EditRange: gvcode.EditRange{
+							Start: gvcode.Position{Runes: ctx.Position.Runes - utf8.RuneCountInString(prefix)},
+							End:   gvcode.Position{Runes: ctx.Position.Runes},
+						},
+					},
+					Description: label,
+					Kind:        "Label",
+				})
+			}
+		}
+	*/
+	return candidates
 }

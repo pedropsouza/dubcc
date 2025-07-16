@@ -349,6 +349,14 @@ func (info *Info) registerLabel(name string) {
 	info.registerLabelAt(name, info.line_counter)
 }
 
+func (info *Info) GetLabel() []string {
+	var labels []string
+	for sym := range info.symbols {
+		labels = append(labels, sym)
+	}
+	return labels
+}
+
 func (info *Info) registerConst(name string, val dubcc.MachineWord) {
 	if name != "" {
 		info.symbols[name] = info.line_counter
@@ -396,10 +404,10 @@ func (info *Info) expandAndRunMacro(macro Macros, line InLine) ([]Repr, error) {
 
 func MakeAssembler() Info {
 	return Info{
-		isa: dubcc.GetDefaultISA(),
+		isa:        dubcc.GetDefaultISA(),
 		directives: Directives(),
-		symbols: make(map[string]dubcc.MachineAddress),
-		macros:  make(map[string]Macros),
+		symbols:    make(map[string]dubcc.MachineAddress),
+		macros:     make(map[string]Macros),
 	}
 }
 
