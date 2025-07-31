@@ -39,6 +39,7 @@ const (
 	ColumnAddress
 	ColumnValue
 	ColumnBinaryValue
+	ColumnHexValue
 	ColumnMax
 )
 
@@ -49,7 +50,9 @@ func (e *MemoryTableEntry) GetColumn(col ColumnEnum) string {
 	case ColumnValue:
 		return strconv.FormatUint(uint64(sim.Mem.Work[e.address]), 10)
 	case ColumnBinaryValue:
-		return fmt.Sprintf("%016b", sim.Mem.Work[e.address])
+		return fmt.Sprintf("%016b"+"b", sim.Mem.Work[e.address])
+	case ColumnHexValue:
+		return fmt.Sprintf("%04x"+"h", sim.Mem.Work[e.address])
 	default:
 		return "n/a"
 	}
@@ -64,6 +67,8 @@ func (e *RegisterTableEntry) GetColumn(col ColumnEnum) string {
 		return strconv.FormatUint(uint64(val), 10)
 	case ColumnBinaryValue:
 		return fmt.Sprintf("%b", val)
+	case ColumnHexValue:
+		return fmt.Sprintf("%x", val)
 	default:
 		return "n/a"
 	}
@@ -72,11 +77,11 @@ func (e *RegisterTableEntry) GetColumn(col ColumnEnum) string {
 var (
 	tableMemory = Table{
 		widget:  widget.List{List: layout.List{Axis: layout.Vertical}},
-		columns: []ColumnEnum{ColumnAddress, ColumnValue, ColumnBinaryValue},
+		columns: []ColumnEnum{ColumnAddress, ColumnValue, ColumnBinaryValue, ColumnHexValue},
 	}
 	tableRegisters = Table{
 		widget:  widget.List{List: layout.List{Axis: layout.Vertical}},
-		columns: []ColumnEnum{ColumnName, ColumnValue},
+		columns: []ColumnEnum{ColumnName, ColumnValue, ColumnHexValue},
 	}
 
 	tableColumnNames = map[ColumnEnum]string{
@@ -84,6 +89,7 @@ var (
 		ColumnAddress:     "Endereço",
 		ColumnValue:       "Valor",
 		ColumnBinaryValue: "Binário",
+		ColumnHexValue:    "Hexadecimal",
 	}
 )
 
@@ -104,6 +110,7 @@ func drawCell(gtx layout.Context, th *material.Theme, text string, weight font.W
 		return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			label := material.Body1(th, text)
 			label.Font.Weight = weight
+			label.MaxLines = 1
 			return label.Layout(gtx)
 		})
 	})

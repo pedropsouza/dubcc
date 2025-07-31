@@ -35,8 +35,7 @@ func TextWithTable(gtx layout.Context, th *material.Theme, title string, bg colo
 			return FillWithLabel(gtx, th, title, red, 16)
 		}),
 		layout.Flexed(0.85, func(gtx layout.Context) layout.Dimensions {
-			ColorBox(gtx, gtx.Constraints.Max, bg)
-			return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layout.UniformInset(unit.Dp(0)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return table.Draw(gtx, th, colWeights)
 			})
 		}),

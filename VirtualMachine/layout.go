@@ -23,19 +23,16 @@ func mainLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 	return layout.Flex{
 		Axis: layout.Horizontal,
 	}.Layout(gtx,
-		layout.Flexed(0.20, func(gtx layout.Context) layout.Dimensions {
-			return FillWithLabel(gtx, th, " D\n U\n B\n c\n c\n", red, 80)
-		}),
 		layout.Rigid(
 			layout.Spacer{Width: unit.Dp(16)}.Layout,
 		),
-		layout.Flexed(0.60, func(gtx layout.Context) layout.Dimensions {
+		layout.Flexed(0.70, func(gtx layout.Context) layout.Dimensions {
 			return centerLayout(gtx, th)
 		}),
 		layout.Rigid(
 			layout.Spacer{Width: unit.Dp(16)}.Layout,
 		),
-		layout.Flexed(0.20, func(gtx layout.Context) layout.Dimensions {
+		layout.Flexed(0.30, func(gtx layout.Context) layout.Dimensions {
 			return rightLayout(gtx, th)
 		}),
 		layout.Rigid(
@@ -49,9 +46,9 @@ func centerLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 		Axis: layout.Vertical,
 	}.Layout(gtx,
 		layout.Flexed(0.4, func(gtx layout.Context) layout.Dimensions {
-			colWeights := []float32{0.3, 0.3, 0.4}
-			return layout.UniformInset(unit.Dp(8)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return TextWithTable(gtx, th, "MEMÓRIA", white, &tableMemory, colWeights)
+			colWeights := []float32{0.2, 0.15, 0.35, 0.3}
+			return layout.UniformInset(unit.Dp(0)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return TextWithTable(gtx, th, "MEMÓRIA", red, &tableMemory, colWeights)
 			})
 		}),
 		layout.Flexed(0.4, func(gtx layout.Context) layout.Dimensions {
@@ -73,12 +70,9 @@ func rightLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 	return layout.Flex{
 		Axis: layout.Vertical,
 	}.Layout(gtx,
-		layout.Flexed(0.9, func(gtx layout.Context) layout.Dimensions {
-			colWeights := []float32{0.5, 0.5}
-			return TextWithTable(gtx, th, "REGISTRADORES", white, &tableRegisters, colWeights)
-		}),
-		layout.Flexed(0.1, func(gtx layout.Context) layout.Dimensions {
-			return ColorBox(gtx, gtx.Constraints.Max, red)
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			colWeights := []float32{0.33, 0.33, 0.33}
+			return TextWithTable(gtx, th, "REGISTRADORES", red, &tableRegisters, colWeights)
 		}),
 	)
 }

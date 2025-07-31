@@ -18,6 +18,7 @@ import (
 )
 
 var window *app.Window
+var register *app.Window
 var editor EditorApp
 var th *material.Theme
 var assembleBtn widget.Clickable
