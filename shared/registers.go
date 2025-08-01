@@ -1,15 +1,16 @@
 package dubcc
 
 type Register struct {
-	Name string
-	Address MachineAddress
-	Desc string
-	Size uint
+	Name     string
+	Address  MachineAddress
+	Desc     string
+	Size     uint
 	Longdesc string
-	Tags RegisterTag
+	Tags     RegisterTag
 }
 
 type RegisterTag byte
+
 const (
 	RegisterTagGeneralPurpose = 1 << iota
 	RegisterTagSpecial
@@ -28,54 +29,54 @@ const (
 )
 
 func RegisterInfo() map[string]*Register {
-	return map[string]*Register {
-		"PC": &Register {
+	return map[string]*Register{
+		"PC": &Register{
 			Name: "PC", Desc: "Contador de Instruções (Program Counter)", Size: 16,
-			Address: RegPC,
+			Address:  RegPC,
 			Longdesc: "Mantém o endereço da próxima instrução a ser executada",
-			Tags: RegisterTagSpecial,
+			Tags:     RegisterTagSpecial,
 		},
-		"SP": &Register {
+		"SP": &Register{
 			Name: "SP", Desc: "Ponteiro de pilha (Stack Pointer)", Size: 16,
-			Address: RegSP,
+			Address:  RegSP,
 			Longdesc: "Aponta para o topo da pilha do sistema; tem incremento/decremento automático (push/pop)",
-			Tags: RegisterTagSpecial,
+			Tags:     RegisterTagSpecial,
 		},
-		"ACC": &Register {
+		"ACC": &Register{
 			Name: "ACC", Desc: "Acumulador", Size: 16,
-			Address: RegACC,
+			Address:  RegACC,
 			Longdesc: "Armazena os dados (carregados e resultantes) das operações da Unid. de Lógica e Aritmética",
-			Tags: RegisterTagGeneralPurpose | RegisterTagSpecial,
+			Tags:     RegisterTagGeneralPurpose | RegisterTagSpecial,
 		},
-		"MOP": &Register {
+		"MOP": &Register{
 			Name: "MOP", Desc: "Modo de Operação", Size: 8,
-			Address: RegMOP,
+			Address:  RegMOP,
 			Longdesc: "Armazena o indicador do modo de operação, que é alterado apenas por painel de operação (via console de operação - interface visual)",
-			Tags: RegisterTagSpecial,
+			Tags:     RegisterTagSpecial,
 		},
-		"RI": &Register {
+		"RI": &Register{
 			Name: "RI", Desc: "Registrador de Instrução", Size: 16,
-			Address: RegRI,
+			Address:  RegRI,
 			Longdesc: "Mantém o opcode da instrução em execução (registrador interno)",
-			Tags: RegisterTagSpecial | RegisterTagInternal,
+			Tags:     RegisterTagSpecial | RegisterTagInternal,
 		},
-		"RE": &Register {
+		"RE": &Register{
 			Name: "RE", Desc: "Registrador de Endereço de Memória", Size: 16,
-			Address: RegRE,
+			Address:  RegRE,
 			Longdesc: "Mantém o endereço de acesso à memória de dados (registrador interno)",
-			Tags: RegisterTagSpecial | RegisterTagInternal,
+			Tags:     RegisterTagSpecial | RegisterTagInternal,
 		},
-		"R0": &Register {
+		"R0": &Register{
 			Name: "R0", Desc: "Registrador de Propósito Geral", Size: 16,
-			Address: RegR0,
+			Address:  RegR0,
 			Longdesc: "Registrador de Propósito Geral",
-			Tags: RegisterTagGeneralPurpose,
+			Tags:     RegisterTagGeneralPurpose,
 		},
-		"R1": &Register {
+		"R1": &Register{
 			Name: "R1", Desc: "Registrador de Propósito Geral", Size: 16,
-			Address: RegR1,
+			Address:  RegR1,
 			Longdesc: "Registrador de Propósito Geral",
-			Tags: RegisterTagGeneralPurpose,
+			Tags:     RegisterTagGeneralPurpose,
 		},
 	}
 }
@@ -85,4 +86,3 @@ func StartupRegisters(isa *ISA, memSize MachineAddress) (out []MachineWord) {
 	out[RegSP] = MachineWord(memSize - 1)
 	return out
 }
-
