@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"dubcc"
 	"dubcc/assembler"
+	_ "embed"
 	"fmt"
 	"gioui.org/app"
 	"gioui.org/op"
@@ -13,6 +15,8 @@ import (
 	"github.com/oligo/gvcode"
 	"github.com/oligo/gvcode/addons/completion"
 	wg "github.com/oligo/gvcode/widget"
+	"image/png"
+	_ "image/png"
 	"log"
 	"os"
 )
@@ -29,6 +33,9 @@ var memCap dubcc.MachineAddress
 var sim dubcc.Sim
 var assemblerSingleton assembler.Info
 var assemblerInfo assembler.Info
+
+//go:embed logoData.png
+var logoData []byte
 
 func main() {
 	memCap = dubcc.MachineAddress(1 << 6)
@@ -111,5 +118,23 @@ func run(window *app.Window) error {
 
 			e.Frame(gtx.Ops)
 		}
+	}
+}
+
+var logoWidget widget.Image
+
+func init() {
+	var err error
+	logoData, err = os.ReadFile("logoData.png")
+	if err != nil {
+		log.Fatalf("Erro ao ler o arquivo: %v", err)
+	}
+	img, err := png.Decode(bytes.NewReader(logoData))
+	if err != nil {
+		log.Fatalf("Falha ao decodificar a imagem: %v", err)
+	}
+	logoWidget = widget.Image{
+		Src: paint.NewImageOp(img),
+		Fit: widget.Contain,
 	}
 }

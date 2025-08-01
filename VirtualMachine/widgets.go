@@ -31,10 +31,10 @@ func textLayout(gtx layout.Context, th *material.Theme, title string) layout.Dim
 
 func TextWithTable(gtx layout.Context, th *material.Theme, title string, bg color.NRGBA, table *Table, colWeights []float32) layout.Dimensions {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Flexed(0.15, func(gtx layout.Context) layout.Dimensions {
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return FillWithLabel(gtx, th, title, red, 16)
 		}),
-		layout.Flexed(0.85, func(gtx layout.Context) layout.Dimensions {
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.UniformInset(unit.Dp(0)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return table.Draw(gtx, th, colWeights)
 			})
@@ -75,14 +75,17 @@ func ColorBox(gtx layout.Context, size image.Point, c color.NRGBA) layout.Dimens
 }
 
 func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
+
 	assembleBtnView := material.Button(th, &assembleBtn, "Assemble")
 	assembleBtnView.Background = yellow
 	assembleBtnView.Color = black
 	assembleBtnView.Font.Typeface = customFont
+
 	stepBtnView := material.Button(th, &stepBtn, "Step")
 	stepBtnView.Background = yellow
 	stepBtnView.Color = black
 	stepBtnView.Font.Typeface = customFont
+
 	resetBtnView := material.Button(th, &resetBtn, "Reset")
 	resetBtnView.Background = yellow
 	resetBtnView.Color = black
@@ -90,48 +93,32 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 
 	return layout.Flex{
 		Axis:      layout.Horizontal,
-		Spacing:   layout.SpaceAround, // Distribui o espaço ao redor
-		Alignment: layout.Middle,      // Centraliza verticalmente
+		Alignment: layout.Middle,
+		Spacing:   layout.SpaceSides,
 	}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return layout.Flex{
-				Axis:      layout.Horizontal,
-				Alignment: layout.Middle,
-			}.Layout(gtx,
-				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-					return layout.Dimensions{Size: gtx.Constraints.Min}
-				}),
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					if assembleBtn.Clicked(gtx) {
-						CompileCode()
-					}
-					return assembleBtnView.Layout(gtx)
-				}),
-
-				layout.Rigid(
-					layout.Spacer{Width: unit.Dp(16)}.Layout,
-				),
-
-				// stepBtn and resetBtn
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					if sim.State != dubcc.SimStateHalt {
-						if stepBtn.Clicked(gtx) {
-							StepSimulation()
-						}
-						return stepBtnView.Layout(gtx)
-					} else {
-						if resetBtn.Clicked(gtx) {
-							log.Printf("reset!")
-							sim.State = dubcc.SimStateRun
-							sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
-						}
-						return resetBtnView.Layout(gtx)
-					}
-				}),
-				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-					return layout.Dimensions{Size: gtx.Constraints.Min}
-				}),
-			)
+			if assembleBtn.Clicked(gtx) {
+				CompileCode()
+			}
+			return assembleBtnView.Layout(gtx)
+		}),
+		layout.Rigid(
+			layout.Spacer{Width: unit.Dp(8)}.Layout,
+		),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			if sim.State != dubcc.SimStateHalt {
+				if stepBtn.Clicked(gtx) {
+					StepSimulation()
+				}
+				return stepBtnView.Layout(gtx)
+			} else {
+				if resetBtn.Clicked(gtx) {
+					log.Printf("reset!")
+					sim.State = dubcc.SimStateRun
+					sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
+				}
+				return resetBtnView.Layout(gtx)
+			}
 		}),
 	)
 }

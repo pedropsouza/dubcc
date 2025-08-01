@@ -57,12 +57,6 @@ func centerLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 		layout.Flexed(0.05, func(gtx layout.Context) layout.Dimensions {
 			return ColorBox(gtx, gtx.Constraints.Max, red)
 		}),
-		layout.Flexed(0.1, func(gtx layout.Context) layout.Dimensions {
-			return actionButtonsLayout(gtx, th)
-		}),
-		layout.Flexed(0.05, func(gtx layout.Context) layout.Dimensions {
-			return ColorBox(gtx, gtx.Constraints.Max, red)
-		}),
 	)
 }
 
@@ -70,9 +64,20 @@ func rightLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 	return layout.Flex{
 		Axis: layout.Vertical,
 	}.Layout(gtx,
+		layout.Rigid(
+			func(gtx layout.Context) layout.Dimensions {
+				colWeights := []float32{0.33, 0.33, 0.33}
+				return TextWithTable(gtx, th, "REGISTRADORES", red, &tableRegisters, colWeights)
+			}),
+		layout.Rigid(
+			layout.Spacer{Height: unit.Dp(32)}.Layout,
+		),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			colWeights := []float32{0.33, 0.33, 0.33}
-			return TextWithTable(gtx, th, "REGISTRADORES", red, &tableRegisters, colWeights)
+			return actionButtonsLayout(gtx, th)
 		}),
+		layout.Rigid(
+			layout.Spacer{Height: unit.Dp(32)}.Layout,
+		),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return logoWidget.Layout(gtx) }),
 	)
 }
