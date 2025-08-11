@@ -194,7 +194,7 @@ func (info *Info) FirstPass(line InLine) ([]Repr, error) {
 		return nil, errors.New("End of macro before start.")
 	}
 
-	log.Fatal("Invalid operation: %v", line.op)
+	log.Printf("Warning: Invalid operation: %v", line.op)
 	return nil, nil
 
 }
@@ -349,6 +349,14 @@ func (info *Info) registerLabel(name string) {
 	info.registerLabelAt(name, info.line_counter)
 }
 
+func (info *Info) GetSymbols() []string {
+	var syms []string
+	for sym := range info.symbols {
+		syms = append(syms, sym)
+	}
+	return syms
+}
+
 func (info *Info) registerConst(name string, val dubcc.MachineWord) {
 	if name != "" {
 		info.symbols[name] = info.line_counter
@@ -396,26 +404,38 @@ func (info *Info) expandAndRunMacro(macro Macros, line InLine) ([]Repr, error) {
 
 func MakeAssembler() Info {
 	return Info{
-		isa: dubcc.GetDefaultISA(),
-		directives: map[string]DirectiveHandler{ //TODO Jogar isso pra fora do MakeAssembler e adicionar as outras.
-			"space": DirectiveHandler{
-				f: func(info *Info, line InLine) {
-					info.registerConst(line.label, 0)
-				},
-				numArgs: 0,
+		isa:        dubcc.GetDefaultISA(),
+		directives: Directives(),
+		symbols:    make(map[string]dubcc.MachineAddress),
+		macros:     make(map[string]Macros),
+	}
+}
+
+func Directives() map[string]DirectiveHandler {
+	return map[string]DirectiveHandler{ //TODO adicionar as outras.
+		"space": {
+			f: func(info *Info, line InLine) {
+				info.registerConst(line.label, 0)
 			},
-			"const": DirectiveHandler{
-				f: func(info *Info, line InLine) {
-					num, err := parseNum(line.args[0])
-					if err != nil {
-						log.Fatalf("can't decide value for const %v: %v", line.label, err)
-					}
-					info.registerConst(line.label, dubcc.MachineWord(num))
-				},
-				numArgs: 1,
-			},
+			numArgs: 0,
 		},
-		symbols: make(map[string]dubcc.MachineAddress),
-		macros:  make(map[string]Macros),
+		"const": {
+			f: func(info *Info, line InLine) {
+				num, err := parseNum(line.args[0])
+				if err != nil {
+					log.Fatalf("can't decide value for const %v: %v", line.label, err)
+				}
+				info.registerConst(line.label, dubcc.MachineWord(num))
+			},
+			numArgs: 1,
+		},
+		"MACRO": {
+			f:       func(info *Info, line InLine) {},
+			numArgs: 0,
+		},
+		"MEND": {
+			f:       func(info *Info, line InLine) {},
+			numArgs: 0,
+		},
 	}
 }

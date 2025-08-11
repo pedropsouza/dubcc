@@ -7,25 +7,25 @@ type (
 
 type ISA struct {
 	Instructions map[string]Instruction
-	Registers map[string]*Register
+	Registers    map[string]*Register
 }
 
-func GetDefaultISA () ISA {
-	return ISA {
+func GetDefaultISA() ISA {
+	return ISA{
 		Instructions: InstMap(),
-		Registers: RegisterInfo(),
+		Registers:    RegisterInfo(),
 	}
 }
 
-type InstHandler func (*Sim, []MachineWord)
+type InstHandler func(*Sim, []MachineWord)
 
 type Sim struct {
-	Mem      SimMem
-	Handlers map[MachineWord]InstHandler
-	MOT map[MachineWord]Instruction
+	Mem       SimMem
+	Handlers  map[MachineWord]InstHandler
+	MOT       map[MachineWord]Instruction
 	Registers []MachineWord
-	Isa ISA
-	State SimState
+	Isa       ISA
+	State     SimState
 }
 
 type SimState = byte
@@ -48,16 +48,16 @@ func (s *Sim) ResolveAddressMode(opword MachineWord, args []MachineWord) []*Mach
 	if inst.NumArgs != len(args) {
 		panic("argument count mismatch")
 	}
-	
-	immediateTests := []func() bool {
-		func() bool { return (opword & OpImmediateFlag) != 0 && (inst.Flags & InstImmediateA) != 0 },
-		func() bool { return (opword & OpImmediateFlag) != 0 && (inst.Flags & InstImmediateB) != 0 },
+
+	immediateTests := []func() bool{
+		func() bool { return (opword&OpImmediateFlag) != 0 && (inst.Flags&InstImmediateA) != 0 },
+		func() bool { return (opword&OpImmediateFlag) != 0 && (inst.Flags&InstImmediateB) != 0 },
 	}
-	indirectTests := []func() bool {
+	indirectTests := []func() bool{
 		func() bool { return (opword & OpIndirectAFlag) != 0 },
 		func() bool { return (opword & OpIndirectBFlag) != 0 },
 	}
-	registerTests := []func() bool {
+	registerTests := []func() bool{
 		func() bool { return (opword & OpRegAFlag) != 0 },
 		func() bool { return (opword & OpRegBFlag) != 0 },
 	}
@@ -107,14 +107,14 @@ func (s *Sim) SetRegisterByName(name string, value MachineWord) {
 	s.Registers[s.Isa.Registers[name].Address] = value
 }
 
-func (s *Sim) MapRegister(regAddress MachineAddress, mapf func (MachineWord) MachineWord) {
+func (s *Sim) MapRegister(regAddress MachineAddress, mapf func(MachineWord) MachineWord) {
 	old := s.Registers[regAddress]
 	s.Registers[regAddress] = mapf(old)
 }
 
 func MakeSim(memSize MachineAddress) Sim {
 	isa := GetDefaultISA()
-	
+
 	mot := make(map[MachineWord]Instruction)
 	for _, inst := range isa.Instructions {
 		mot[inst.Repr] = inst
@@ -125,13 +125,13 @@ func MakeSim(memSize MachineAddress) Sim {
 		mopHandlers[isa.Instructions[name].Repr] = handler
 	}
 
-	return Sim {
-		Mem: SimMem {
+	return Sim{
+		Mem: SimMem{
 			Work: make([]MachineWord, memSize),
 		},
-		Isa: isa,
-		MOT: mot,
+		Isa:       isa,
+		MOT:       mot,
 		Registers: StartupRegisters(&isa, memSize),
-		Handlers: mopHandlers,
+		Handlers:  mopHandlers,
 	}
 }

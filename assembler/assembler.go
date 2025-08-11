@@ -2,11 +2,11 @@ package main
 
 import (
 	"bufio"
-	"os"
-	"log"
 	"bytes"
 	assembler "dubcc/assembler"
 	"github.com/k0kubun/pp/v3"
+	"log"
+	"os"
 )
 
 func main() {
@@ -23,7 +23,9 @@ func main() {
 
 	info := assembler.MakeAssembler()
 	for {
-		if !scanner.Scan() { break }
+		if !scanner.Scan() {
+			break
+		}
 		line := scanner.Text()
 		outLine, err := info.FirstPassString(line)
 		pp.Fprintf(os.Stderr, "processing %v... ", line)
