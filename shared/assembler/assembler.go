@@ -317,10 +317,10 @@ func (info *Info) SecondPass() map[string]dubcc.MachineAddress {
 }
 
 func parseNum(in string) (num uint64, err error) {
-	b2 := regexp.MustCompile("^0b[0-1]+$")
-	b8 := regexp.MustCompile("^0o[0-7]+$")
-	b10 := regexp.MustCompile("^[0-9]+$")
-	b16 := regexp.MustCompile("^0x[0-9]+$")
+	b2 := regexp.MustCompile("^0b([0-1]+)$")
+	b8 := regexp.MustCompile("^0o([0-7]+)$")
+	b10 := regexp.MustCompile("^([0-9]+)$")
+	b16 := regexp.MustCompile("^0x([0-9abcdefABCDEF]+)$")
 
 	recognizerBaseMap := map[*regexp.Regexp]int{
 		b2:  2,
@@ -329,9 +329,10 @@ func parseNum(in string) (num uint64, err error) {
 		b16: 16,
 	}
 	for recognizer, base := range recognizerBaseMap {
-		matches := recognizer.Match([]byte(in))
-		if matches {
-			num, err := strconv.ParseInt(in, base, 64)
+		matches := recognizer.FindStringSubmatch(in)
+		if len(matches) > 1 {
+			match := matches[1]
+			num, err := strconv.ParseInt(match, base, 64)
 			if err != nil {
 				return 0, err
 			}
