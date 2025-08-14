@@ -193,27 +193,30 @@ func InstHandlers() map[string]InstHandler {
 		),
 		"push": mutateState1Handler(func(s *Sim, value *MachineWord) {
 			s.Mem.Work[s.GetRegister(RegSP)] = *value
-			s.MapRegister(RegSP, func(valueSP MachineWord) MachineWord { return valueSP - 1 })
+			s.MapRegister(RegSP, func(valueSP MachineWord) MachineWord { return valueSP + 1 })
 		},
 		),
 		"pop": mutateState1Handler(func(s *Sim, value *MachineWord) {
-			if !(s.GetRegister(RegSP) == (MachineWord(len(s.Mem.Work)) - 1)) {
-				s.MapRegister(RegSP, func(valueSP MachineWord) MachineWord { return valueSP + 1 })
+			if !(s.GetRegister(RegSP) == (MachineWord(len(s.Mem.Work)) / 2)) {
+				s.MapRegister(RegSP, func(valueSP MachineWord) MachineWord { return valueSP - 1 })
 			}
 			*value = s.Mem.Work[s.GetRegister(RegSP)]
+			s.Mem.Work[s.GetRegister(RegSP)] = 0
 		},
 		),
 		"call": mutateState1Handler(func(s *Sim, value *MachineWord) {
 			s.Mem.Work[s.GetRegister(RegSP)] = s.GetRegister(RegPC)
-			s.MapRegister(RegSP, func(valueSP MachineWord) MachineWord { return valueSP - 1 })
+			s.MapRegister(RegSP, func(valueSP MachineWord) MachineWord { return valueSP + 1 })
 			s.SetRegister(RegPC, *value)
 
 		}),
 		"ret": mutateState1Handler(func(s *Sim, value *MachineWord) {
-			if !(s.GetRegister(RegSP) == (MachineWord(len(s.Mem.Work)) - 1)) {
-				s.MapRegister(RegSP, func(valueSP MachineWord) MachineWord { return valueSP + 1 })
+			if !(s.GetRegister(RegSP) == (MachineWord(len(s.Mem.Work)) / 2)) {
+				s.MapRegister(RegSP, func(valueSP MachineWord) MachineWord { return valueSP - 1 })
 			}
 			s.SetRegister(RegPC, s.Mem.Work[s.GetRegister(RegSP)])
+			s.Mem.Work[s.GetRegister(RegSP)] = 0
+
 		},
 		),
 	}

@@ -25,7 +25,10 @@ Para testar o programa desenvolvido, certifique-se que possua:
 - Sistema operacional Windows ou Linux
 
 ### 💻 Executando
-Placeholder
+Dentro do diretório VirtualMachine:
+`go build
+E após isso:
+`./VirtualMachine
 
 ### 🤝 Membros do Grupo
 Líder

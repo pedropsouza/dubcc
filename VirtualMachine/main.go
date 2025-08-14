@@ -95,13 +95,6 @@ func run(window *app.Window) error {
 	editor.state.SetSyntaxTokens(tokens...)
 	editor.state.SetText(editor.state.Text())
 
-	/*editor.state.AddDecorations(
-		decoration.Decoration{Source: "test", Start: 5, End: 150, Background: &decoration.Background{Color: highlightColor}},
-		decoration.Decoration{Source: "test", Start: 100, End: 200, Background: &decoration.Background{Color: highlightColor2}},
-		decoration.Decoration{Source: "test", Start: 100, End: 200, Squiggle: &decoration.Squiggle{Color: highlightColor3}},
-		decoration.Decoration{Source: "test", Start: 250, End: 400, Strikethrough: &decoration.Strikethrough{Color: highlightColor3}},
-	)*/
-
 	for {
 		event := window.Event()
 		switch e := event.(type) {

@@ -98,6 +98,7 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 	}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			if assembleBtn.Clicked(gtx) {
+				WipeMemory()
 				CompileCode()
 			}
 			return assembleBtnView.Layout(gtx)
@@ -126,6 +127,7 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 func CompileCode() {
 	sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
 	assemblerInfo = assembler.MakeAssembler()
+
 	for _, line := range strings.Split(editor.state.Text(), "\n") {
 		assemblerInfo.FirstPassString(line)
 	}
@@ -138,6 +140,12 @@ func CompileCode() {
 		sim.Mem.Work[idx] = val
 	}
 	sim.State = dubcc.SimStatePause
+}
+func WipeMemory() {
+	memCap := len(sim.Mem.Work)
+	for i := range memCap {
+		sim.Mem.Work[i] = 0
+	}
 }
 
 func StepSimulation() {
