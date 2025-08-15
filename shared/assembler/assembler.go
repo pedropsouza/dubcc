@@ -168,12 +168,12 @@ func (info *Info) FirstPassString(rawLine string) (reprs []Repr, err error) {
 }
 
 func (info *Info) FirstPass(line InLine) ([]Repr, error) {
+	if info.macroLevel > 0 {
+		return info.handleMacro(line)
+	}
 	if line.op == "MACRO" {
 		info.macroLevel++
 		return nil, nil
-	}
-	if info.macroLevel > 0 {
-		return info.handleMacro(line)
 	}
 	idata, ifound := info.isa.Instructions[line.op]
 	if ifound { //Try instruction
