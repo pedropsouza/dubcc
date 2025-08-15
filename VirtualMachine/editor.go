@@ -3,6 +3,7 @@ package main
 import (
 	"dubcc/assembler"
 	"fmt"
+	"gioui.org/io/key"
 	"hash/crc32"
 	"image"
 	"image/color"
@@ -24,6 +25,8 @@ import (
 	"regexp"
 )
 
+var fontSize unit.Sp = 12
+
 type (
 	C = layout.Context
 	D = layout.Dimensions
@@ -40,8 +43,45 @@ var lastAnalysisHash uint32
 
 func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
 	hash := crc32.ChecksumIEEE([]byte(editor.state.Text()))
+
+	for {
+		e, ok := gtx.Event(
+			key.Filter{Name: "+"},
+			key.Filter{Name: "-"},
+			key.Filter{Name: "="},
+			key.Filter{Name: "NumpadAdd"},
+			key.Filter{Name: "NumpadSubtract"},
+			key.Filter{Name: "F1"},
+			key.Filter{Name: "F2"},
+		)
+		if !ok {
+			break
+		}
+
+		if ke, ok := e.(key.Event); ok && ke.State == key.Press {
+			switch ke.Name {
+			case "+", "=", "NumpadAdd":
+				fontSize += 1
+			case "-", "NumpadSubtract":
+				if fontSize > 6 {
+					fontSize -= 1
+				}
+			case "F1":
+				WipeMemory()
+				CompileCode()
+			case "F2":
+				StepSimulation()
+			}
+		}
+	}
+	ed.state.WithOptions(
+		gvcode.WithFont(font.Font{Typeface: "monospace", Weight: font.SemiBold}),
+		gvcode.WithTextSize(fontSize),
+		gvcode.WithLineHeight(0, 1.5),
+	)
 	for {
 		evt, ok := ed.state.Update(gtx)
+
 		if !ok {
 			break
 		}
@@ -84,12 +124,6 @@ func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
 					Axis: layout.Horizontal,
 				}.Layout(gtx,
 					layout.Flexed(1.0, func(gtx layout.Context) layout.Dimensions {
-						ed.state.WithOptions(
-							gvcode.WithFont(font.Font{Typeface: "monospace", Weight: font.SemiBold}),
-							gvcode.WithTextSize(unit.Sp(12)),
-							gvcode.WithLineHeight(0, 1.5),
-						)
-
 						dims := ed.state.Layout(gtx, th.Shaper)
 
 						macro := op.Record(gtx.Ops)

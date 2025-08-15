@@ -117,6 +117,7 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 					log.Printf("reset!")
 					sim.State = dubcc.SimStateRun
 					sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
+					WipeMemory()
 				}
 				return resetBtnView.Layout(gtx)
 			}
