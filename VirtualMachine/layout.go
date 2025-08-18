@@ -4,6 +4,8 @@ import (
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/op/clip"
+	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
 	"image"
@@ -23,7 +25,6 @@ var (
 
 func mainLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 	return layout.Stack{}.Layout(gtx,
-		// Camada base: sua UI normal (barra de menu + conteúdo)
 		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -42,12 +43,10 @@ func mainLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 			)
 		}),
 
-		// Camada 2: backdrop clicável (só quando o menu está aberto)
 		layout.Stacked(func(gtx layout.Context) layout.Dimensions {
 			if !menuBar.showFileMenu {
 				return layout.Dimensions{}
 			}
-			// se clicar fora, fecha
 			if menuBar.backdrop.Clicked(gtx) {
 				menuBar.showFileMenu = false
 			}
@@ -57,19 +56,48 @@ func mainLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 			})
 		}),
 
-		// Camada 3: o dropdown em si (desenhado acima do backdrop)
 		layout.Stacked(func(gtx layout.Context) layout.Dimensions {
 			if !menuBar.showFileMenu {
 				return layout.Dimensions{}
 			}
-			// posicione o dropdown: um pouco à direita e logo abaixo da barra
-			// (ajuste estes números conforme sua barra)
 			x := gtx.Dp(unit.Dp(8))
 			menuH := gtx.Dp(unit.Dp(36))
 			op := op.Offset(image.Pt(x, menuH))
 			defer op.Push(gtx.Ops).Pop()
 
 			return menuBar.renderFileMenu(gtx, th)
+		}),
+		layout.Stacked(func(gtx layout.Context) layout.Dimensions {
+			if !showExplorer {
+				return layout.Dimensions{}
+			}
+			size := gtx.Constraints.Max
+			defer clip.Rect{Max: size}.Push(gtx.Ops).Pop()
+			paint.ColorOp{Color: color.NRGBA{R: 0, G: 0, B: 0, A: 180}}.Add(gtx.Ops)
+			paint.PaintOp{}.Add(gtx.Ops)
+
+			cardW := int(float32(size.X) * 0.8)
+			cardH := int(float32(size.Y) * 0.8)
+			offX := (size.X - cardW) / 2
+			offY := (size.Y - cardH) / 2
+			defer op.Offset(image.Pt(offX, offY)).Push(gtx.Ops).Pop()
+
+			gtx2 := gtx
+			gtx2.Constraints = layout.Constraints{
+				Min: image.Pt(cardW, cardH),
+				Max: image.Pt(cardW, cardH),
+			}
+
+			radius := gtx2.Dp(unit.Dp(12))
+			defer clip.UniformRRect(image.Rectangle(clip.Rect{Max: image.Pt(cardW, cardH)}), radius).Push(gtx2.Ops).Pop()
+
+			paint.ColorOp{Color: white}.Add(gtx2.Ops)
+			paint.PaintOp{}.Add(gtx2.Ops)
+
+			inset := layout.UniformInset(unit.Dp(12))
+			return inset.Layout(gtx2, func(gtx layout.Context) layout.Dimensions {
+				return fe.Layout(gtx2, th)
+			})
 		}),
 	)
 }

@@ -65,6 +65,7 @@ func (mb *MenuBar) renderFileMenu(gtx layout.Context, th *material.Theme) layout
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			btn := TextButton(th, &mb.openBtn, "Open…")
 			if mb.openBtn.Clicked(gtx) {
+				showExplorer = true
 				mb.showFileMenu = false
 			}
 			return btn.Layout(gtx)

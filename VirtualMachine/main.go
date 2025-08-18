@@ -30,6 +30,9 @@ var fileBtn, editBtn, helpBtn widget.Clickable
 var openBtn, saveBtn, exitBtn widget.Clickable
 var menuBar MenuBar
 
+var showExplorer bool
+var fe = NewFileExplorer()
+
 var memCap dubcc.MachineAddress
 var sim dubcc.Sim
 var assemblerSingleton assembler.Info
@@ -134,6 +137,14 @@ func init() {
 	img, err := png.Decode(bytes.NewReader(logoData))
 	if err != nil {
 		log.Fatalf("Falha ao decodificar a imagem: %v", err)
+	}
+	fe.SetStartDir(".")
+	fe.OnSelect = func(path string) {
+		data, err := os.ReadFile(path)
+		if err == nil {
+			editor.state.SetText(string(data))
+		}
+		showExplorer = false
 	}
 	logoWidget = widget.Image{
 		Src: paint.NewImageOp(img),
