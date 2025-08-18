@@ -3,8 +3,10 @@ package main
 import (
 	"gioui.org/font"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
+	"image"
 	"image/color"
 )
 
@@ -20,24 +22,55 @@ var (
 )
 
 func mainLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
-	return layout.Flex{
-		Axis: layout.Horizontal,
-	}.Layout(gtx,
-		layout.Rigid(
-			layout.Spacer{Width: unit.Dp(16)}.Layout,
-		),
-		layout.Flexed(0.70, func(gtx layout.Context) layout.Dimensions {
-			return centerLayout(gtx, th)
+	return layout.Stack{}.Layout(gtx,
+		// Camada base: sua UI normal (barra de menu + conteúdo)
+		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
+			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					return menuBar.Layout(gtx, th)
+				}),
+				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+					return layout.Flex{Axis: layout.Horizontal}.Layout(
+						gtx,
+						layout.Rigid(layout.Spacer{Width: unit.Dp(16)}.Layout),
+						layout.Flexed(0.70, func(gtx layout.Context) layout.Dimensions { return centerLayout(gtx, th) }),
+						layout.Rigid(layout.Spacer{Width: unit.Dp(16)}.Layout),
+						layout.Flexed(0.30, func(gtx layout.Context) layout.Dimensions { return rightLayout(gtx, th) }),
+						layout.Rigid(layout.Spacer{Width: unit.Dp(16)}.Layout),
+					)
+				}),
+			)
 		}),
-		layout.Rigid(
-			layout.Spacer{Width: unit.Dp(16)}.Layout,
-		),
-		layout.Flexed(0.30, func(gtx layout.Context) layout.Dimensions {
-			return rightLayout(gtx, th)
+
+		// Camada 2: backdrop clicável (só quando o menu está aberto)
+		layout.Stacked(func(gtx layout.Context) layout.Dimensions {
+			if !menuBar.showFileMenu {
+				return layout.Dimensions{}
+			}
+			// se clicar fora, fecha
+			if menuBar.backdrop.Clicked(gtx) {
+				menuBar.showFileMenu = false
+			}
+			// clickable invisível cobrindo a tela toda
+			return menuBar.backdrop.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return layout.Dimensions{Size: gtx.Constraints.Max}
+			})
 		}),
-		layout.Rigid(
-			layout.Spacer{Width: unit.Dp(16)}.Layout,
-		),
+
+		// Camada 3: o dropdown em si (desenhado acima do backdrop)
+		layout.Stacked(func(gtx layout.Context) layout.Dimensions {
+			if !menuBar.showFileMenu {
+				return layout.Dimensions{}
+			}
+			// posicione o dropdown: um pouco à direita e logo abaixo da barra
+			// (ajuste estes números conforme sua barra)
+			x := gtx.Dp(unit.Dp(8))
+			menuH := gtx.Dp(unit.Dp(36))
+			op := op.Offset(image.Pt(x, menuH))
+			defer op.Push(gtx.Ops).Pop()
+
+			return menuBar.renderFileMenu(gtx, th)
+		}),
 	)
 }
 

@@ -51,8 +51,6 @@ func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
 			key.Filter{Name: "="},
 			key.Filter{Name: "NumpadAdd"},
 			key.Filter{Name: "NumpadSubtract"},
-			key.Filter{Name: "F1"},
-			key.Filter{Name: "F2"},
 		)
 		if !ok {
 			break
@@ -66,11 +64,6 @@ func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
 				if fontSize > 6 {
 					fontSize -= 1
 				}
-			case "F1":
-				WipeMemory()
-				CompileCode()
-			case "F2":
-				StepSimulation()
 			}
 		}
 	}
@@ -246,7 +239,7 @@ func HighlightTextByPattern(text string) []syntax.Token {
 	{ //Comments
 		tokens = append(tokens,
 			applyPattern(
-				regexp.MustCompile("^.*(;.*$)"),
+				regexp.MustCompile(`(?m);[^\r\n]*`),
 				text,
 				"custom.comment")...)
 

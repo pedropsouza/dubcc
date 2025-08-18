@@ -25,9 +25,10 @@ var window *app.Window
 var register *app.Window
 var editor EditorApp
 var th *material.Theme
-var assembleBtn widget.Clickable
-var stepBtn widget.Clickable
-var resetBtn widget.Clickable
+var assembleBtn, stepBtn, resetBtn widget.Clickable
+var fileBtn, editBtn, helpBtn widget.Clickable
+var openBtn, saveBtn, exitBtn widget.Clickable
+var menuBar MenuBar
 
 var memCap dubcc.MachineAddress
 var sim dubcc.Sim
@@ -36,6 +37,14 @@ var assemblerInfo assembler.Info
 
 //go:embed logoData.png
 var logoData []byte
+
+type MenuBar struct {
+	fileBtn, editBtn, helpBtn                widget.Clickable
+	openBtn, saveBtn, exitBtn                widget.Clickable
+	showFileMenu, showEditMenu, showHelpMenu bool
+	menuWidth                                int
+	backdrop                                 widget.Clickable
+}
 
 func main() {
 	memCap = dubcc.MachineAddress(1 << 6)

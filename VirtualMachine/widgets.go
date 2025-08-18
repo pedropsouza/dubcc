@@ -5,15 +5,86 @@ import (
 	"dubcc/assembler"
 	"gioui.org/font"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"image"
 	"image/color"
 	"log"
 	"strings"
 )
+
+func (mb *MenuBar) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
+	bar := layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			if mb.fileBtn.Clicked(gtx) {
+				mb.showFileMenu = !mb.showFileMenu
+			}
+			btn := material.Button(th, &mb.fileBtn, "File")
+			btn.Background = yellow
+			btn.Color = black
+			btn.Font.Typeface = customFont
+			return btn.Layout(gtx)
+		}),
+		layout.Rigid(layout.Spacer{Width: unit.Dp(6)}.Layout),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			btn := material.Button(th, &mb.editBtn, "Edit")
+			btn.Background = yellow
+			btn.Color = black
+			btn.Font.Typeface = customFont
+			return btn.Layout(gtx)
+		}),
+		layout.Rigid(layout.Spacer{Width: unit.Dp(6)}.Layout),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			btn := material.Button(th, &mb.helpBtn, "Help")
+			btn.Background = yellow
+			btn.Color = black
+			btn.Font.Typeface = customFont
+			return btn.Layout(gtx)
+		}),
+	)
+	layout.Stacked(func(gtx layout.Context) layout.Dimensions {
+		if !mb.showFileMenu {
+			return layout.Dimensions{}
+		}
+		op.Offset(image.Pt(0, gtx.Dp(unit.Dp(30)))).Add(gtx.Ops)
+		return mb.renderFileMenu(gtx, th)
+	})
+	return bar
+}
+func (mb *MenuBar) renderFileMenu(gtx layout.Context, th *material.Theme) layout.Dimensions {
+	size := image.Pt(gtx.Dp(unit.Dp(90)), gtx.Dp(unit.Dp(90)))
+	defer clip.Rect{Max: size}.Push(gtx.Ops).Pop()
+	paint.ColorOp{Color: yellow}.Add(gtx.Ops)
+	paint.PaintOp{}.Add(gtx.Ops)
+
+	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			btn := TextButton(th, &mb.openBtn, "Open…")
+			if mb.openBtn.Clicked(gtx) {
+				mb.showFileMenu = false
+			}
+			return btn.Layout(gtx)
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			btn := TextButton(th, &mb.saveBtn, "Save")
+			if mb.saveBtn.Clicked(gtx) {
+				mb.showFileMenu = false
+			}
+			return btn.Layout(gtx)
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			btn := TextButton(th, &mb.exitBtn, "Exit")
+			if mb.exitBtn.Clicked(gtx) {
+				mb.showFileMenu = false
+			}
+			return btn.Layout(gtx)
+		}),
+	)
+}
 
 func textLayout(gtx layout.Context, th *material.Theme, title string) layout.Dimensions {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
@@ -72,6 +143,15 @@ func ColorBox(gtx layout.Context, size image.Point, c color.NRGBA) layout.Dimens
 	paint.ColorOp{Color: c}.Add(gtx.Ops)
 	paint.PaintOp{}.Add(gtx.Ops)
 	return layout.Dimensions{Size: size}
+}
+
+func TextButton(th *material.Theme, btn *widget.Clickable, label string) material.ButtonStyle {
+	b := material.Button(th, btn, label)
+	b.Background = color.NRGBA{}
+	b.Color = black
+	b.Inset = layout.UniformInset(unit.Dp(4))
+	b.CornerRadius = unit.Dp(0)
+	return b
 }
 
 func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
