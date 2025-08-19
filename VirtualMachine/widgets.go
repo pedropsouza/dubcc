@@ -1,20 +1,20 @@
 package main
 
 import (
-        "dubcc"
-        "dubcc/assembler"
-        "image"
-        "image/color"
-        "log"
-        "strings"
-        "gioui.org/font"
-        "gioui.org/layout"
-        "gioui.org/op"
-        "gioui.org/op/clip"
-        "gioui.org/op/paint"
-        "gioui.org/unit"
-        "gioui.org/widget"
-        "gioui.org/widget/material"
+	"dubcc"
+	"dubcc/assembler"
+	"image"
+	"image/color"
+	"log"
+	"strings"
+	"gioui.org/font"
+	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/op/clip"
+	"gioui.org/op/paint"
+	"gioui.org/unit"
+	"gioui.org/widget"
+	"gioui.org/widget/material"
 )
 
 func (mb *MenuBar) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
