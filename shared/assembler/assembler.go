@@ -3,13 +3,14 @@ package assembler
 import (
 	"dubcc"
 	"errors"
-	"github.com/k0kubun/pp/v3"
 	"log"
 	"os"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/k0kubun/pp/v3"
 )
 
 type Info struct {
@@ -22,6 +23,7 @@ type Info struct {
 	macroStack   []MacroFrame
 	output       []dubcc.MachineWord
 	line_counter dubcc.MachineAddress
+	StartAddress dubcc.MachineAddress
 }
 
 func (info *Info) GetOutput() []dubcc.MachineWord {
@@ -437,6 +439,21 @@ func Directives() map[string]DirectiveHandler {
 		"MEND": {
 			f:       func(info *Info, line InLine) {},
 			numArgs: 0,
+		},
+		"start": {
+			f: func(info *Info, line InLine) {
+				if len(line.args) != 1 {
+					log.Fatalf("start directive requires one argument (address), got %d", len(line.args))
+				}
+				addrStr := line.args[0]
+				addr, err := parseNum(addrStr)
+				if err != nil {
+					log.Fatalf("invalid start address: %v", err)
+				}
+				info.StartAddress = dubcc.MachineAddress(addr)
+
+			},
+			numArgs: 1,
 		},
 	}
 }
