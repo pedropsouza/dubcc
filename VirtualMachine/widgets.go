@@ -7,6 +7,8 @@ import (
 	"image/color"
 	"log"
 	"strings"
+	"os"
+	"encoding/binary"
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -216,23 +218,36 @@ func CompileCode() {
 		assemblerInfo.FirstPassString(line)
 	}
 	assemblerInfo.SecondPass()
+
+	// TODO: do we call CompileCode() to each file or for a group of files ??
+	objFilename := "test.o"
+	obj, err := assemblerInfo.GenerateObjectFile()
+	if err != nil {
+		log.Fatalf("error: could not compile: %v", err)
+	}
+	log.Printf("code compiled successfully: %d symbols, %d relocations",
+		len(obj.Symbols), len(obj.Relocations))
+
+	if err := saveCompleteObjectFile(obj, objFilename); err != nil {
+		log.Printf("warning: could not save %s: %v", objFilename, err)
+	}
+
+	// NOTE: i believe here the linker is called to build the memory image
 	mem := assemblerInfo.GetOutput()
+
 	if len(mem) > len(sim.Mem.Work) {
 		panic("program's too big")
 	}
+
 	startAddressMachineWord := dubcc.MachineWord(assemblerInfo.StartAddress)
 	sim.SetRegister(dubcc.RegPC, startAddressMachineWord) // Altera o valor do PC pro valor indicado na diretiva "start"
 	startAddressInt := int(assemblerInfo.StartAddress)
+
+	// NOTE: loader starts here
 	for idx, val := range mem {
 		sim.Mem.Work[startAddressInt+idx] = val
 	}
 	sim.State = dubcc.SimStatePause
-}
-func WipeMemory() {
-	memCap := len(sim.Mem.Work)
-	for i := range memCap {
-		sim.Mem.Work[i] = 0
-	}
 }
 
 func StepSimulation() {
@@ -270,4 +285,34 @@ func StepSimulation() {
 			sim.State = dubcc.SimStatePause
 		}
 	}
+}
+
+func WipeMemory() {
+	memCap := len(sim.Mem.Work)
+	for i := range memCap {
+		sim.Mem.Work[i] = 0
+	}
+}
+
+func machineWordsToBytes(words []dubcc.MachineWord) []byte {
+	buf := make([]byte, len(words)*2)
+	for i, word := range words {
+		binary.LittleEndian.PutUint16(buf[i*2:], uint16(word))
+	}
+	return buf
+}
+
+func saveCompleteObjectFile(obj *assembler.ObjectFile, filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	
+	return obj.Write(file)
+}
+
+// in case we need just the raw assembler output
+func saveObjectFile(data []dubcc.MachineWord, filename string) error {
+	return os.WriteFile(filename, machineWordsToBytes(data), 0644)
 }
