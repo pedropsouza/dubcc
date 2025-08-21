@@ -11,7 +11,7 @@ import (
 type Info struct {
 	macros       map[string]Macros
 	macroLevel   int
-	macroStack   []MacroFrame
+	//macroStack   []MacroFrame
 	output       []string
 	lineCounter dubcc.MachineAddress
 }
@@ -20,15 +20,15 @@ func (info *Info) GetOutput() []string {
 	return info.output
 }
 
-type Macros struct {
+type Macro struct {
 	args      []string
 	body      []string
 	definedAt dubcc.MachineAddress //Totalmente opcional, uso futuro para mensagens de erro
 }
 
-type MacroFrame struct {
+type MacroMeta struct {
 	name string
-	args []string
+  args []string
 	body []string
 }
 
@@ -40,65 +40,64 @@ func BoolToInt(val bool) int {
 	}
 }
 
-var EmptyLineErr = errors.New("empty line")
-
 func (info *Info) ProcessLine(rawline string) (err error) {
 	line, err := dubcc.ParseAsmLine(rawline)
-	if line.Op == "MACRO" {
+  if line.Op == "MACRO" {
 		info.macroLevel++
 		return nil
-	}
-	if info.macroLevel > 0 {
-		return info.handleMacroDef(line)
-	}
-
-	expansion := line.Raw
-	macro, mfound := info.macros[line.Op]
-	if mfound { //This shit has to be a macro, right?
-		expansion, err = info.expandAndRunMacro(macro, line)
-		if err != nil { return err }
-	}
-	if line.Op == "MEND" { //De preferência, deixar como último teste
-		return errors.New("End of macro before start.")
+	} else if line.Op == "MEND" {
+		if info.macroLevel <= 0 {
+			return errors.New("End of macro before start.")
+		}
+		info.macroLevel--
 	}
 
-	info.output = append(info.output, expansion)
+	expansion, err := info.expandAndRunAllMacros(line)
+	if err != nil {
+		return errors.New("Error expanding macro: " + err.Error())
+	}
+	info.output = append(info.output, expansion...)
 	return nil
 }
 
-func (info *Info) handleMacroDef(line dubcc.InLine) (err error) {
-	if len(info.macroStack) < info.macroLevel { //Se for a primeira linha...
-		for len(info.macroStack) < info.macroLevel {
-			info.macroStack = append(info.macroStack, MacroFrame{})
+func (info *Info) handleMacroDef(acc *Macro, line dubcc.InLine) (err error) {
+	if len(acc.body) == 0 {
+    fields := strings.Fields(line.Raw)
+		if len(fields) == 0 {
+			return errors.New("bad macro syntax!")
 		}
-		info.macroStack[info.macroLevel-1] = MacroFrame{
-			name: line.Op,
-			args: line.Args,
+		acc = MacroMeta{
+			name: fields[0],
+			args: fields[1:],
 			body: []string{},
 		}
 		return nil
 	}
-
-	if line.Op == "MEND" { //Aqui, toda macro foi lida e o MEND vai fechar a macro
-		info.macroLevel--
-		frame := info.macroStack[info.macroLevel]
-		macro := Macros{
-			args:      frame.args,
-			body:      frame.body,
-			definedAt: info.lineCounter,
-		}
-
-		info.macroStack = slices.Delete(info.macroStack, info.macroLevel, info.macroLevel+1)
-		info.macros[frame.name] = macro
-		return nil
-	}
-	frame := &info.macroStack[info.macroLevel-1]
-	frame.body = append(frame.body, line.Raw)
-	return nil
 }
 
-func (info *Info) expandAndRunMacro(macro Macros, line dubcc.InLine) (string, error) {
-	macro_err_str := "macro error!"
+func (info *Info) expandAndRunAllMacros(line dubcc.InLine) (out []string, err error) {
+	lines := []dubcc.InLine{line}
+	for len(lines) > 0 {
+		line := lines[0]
+		lines = lines[1:]
+		macro, mfound := info.macros[line.Op]
+		if mfound {
+			expansion, err := info.expandAndRunMacro(macro, line)
+			if err != nil { return nil, err }
+			for _, expanded_line := range expansion {
+				reparse, err := dubcc.ParseAsmLine(expanded_line)
+				if err != nil { return nil, err }
+				lines = append(lines, reparse)
+			}
+		} else {
+			out = append(out, line.Raw)
+		}
+	}
+	return out, err
+}
+
+func (info *Info) expandAndRunMacro(macro Macros, line dubcc.InLine) ([]string, error) {
+	macro_err_str := []string{"macro error!"}
 	if len(line.Args) != len(macro.args) {
 		return macro_err_str, errors.New("number of arguments doesn't match")
 	}
@@ -108,7 +107,10 @@ func (info *Info) expandAndRunMacro(macro Macros, line dubcc.InLine) (string, er
 		substitutions[formal] = line.Args[i]
 	}
 
-	var macro_expansion = ""
+	var macro_expansion = []string{}
+	if line.Label != "" {
+		macro_expansion = append(macro_expansion, line.Label + ":")
+	}
 	for _, raw := range macro.body {
 		words := strings.Split(raw, " ")
 		for i, word := range words {
@@ -119,7 +121,7 @@ func (info *Info) expandAndRunMacro(macro Macros, line dubcc.InLine) (string, er
 		}
 		expanded := strings.Join(words, " ")
 
-		macro_expansion = macro_expansion + expanded
+		macro_expansion = append(macro_expansion, expanded)
 	}
 	log.Print(macro_expansion)
 	return macro_expansion, nil
