@@ -261,7 +261,7 @@ func CompileCode() {
 		}
 	}
 
-	// this is loading all the object files in the memory
+	// this is concatenating all the object files in a single memory image
 	var mem []dubcc.MachineWord
 	for _, file := range files {
 		mem = append(mem, file.Object.ToMachineWordSlice()...)
