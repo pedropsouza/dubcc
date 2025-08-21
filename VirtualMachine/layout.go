@@ -50,7 +50,6 @@ func mainLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 			if menuBar.backdrop.Clicked(gtx) {
 				menuBar.showFileMenu = false
 			}
-			// clickable invisível cobrindo a tela toda
 			return menuBar.backdrop.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Dimensions{Size: gtx.Constraints.Max}
 			})
@@ -139,6 +138,7 @@ func rightLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 		layout.Rigid(
 			layout.Spacer{Height: unit.Dp(32)}.Layout,
 		),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return logoWidget.Layout(gtx) }),
+		//layout.Rigid(func(gtx layout.Context) layout.Dimensions { return logoWidget.Layout(gtx) }),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return LayoutGeral(gtx, terminal) }),
 	)
 }

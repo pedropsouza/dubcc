@@ -29,6 +29,7 @@ var assembleBtn, stepBtn, resetBtn widget.Clickable
 var fileBtn, editBtn, helpBtn widget.Clickable
 var openBtn, saveBtn, exitBtn widget.Clickable
 var menuBar MenuBar
+var terminal *Terminal
 
 var showExplorer bool
 var fe = NewFileExplorer()
@@ -82,6 +83,7 @@ func main() {
 }
 
 func run(window *app.Window) error {
+	terminal = NewTerminal(th)
 	var ops op.Ops
 
 	customScheme := createCustomColorScheme(th)
