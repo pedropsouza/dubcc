@@ -42,7 +42,7 @@ func (info *Info) GetOutput() []dubcc.MachineWord {
 }
 
 type DirectiveHandler struct {
-	f       func(info *Info, line InLine)
+	f       func(info *Info, line dubcc.InLine)
 	numArgs int
 }
 
@@ -125,36 +125,6 @@ func (usymchain *UndefSymChain) LookupSym(name string) *UndefSymChainLink {
 	}
 }
 
-type InLine struct {
-	raw   string   //Linha original
-	label string   //Rótulo
-	op    string   //Operação (instrução ou diretiva)
-	args  []string //Argumentos
-}
-
-var EmptyLineErr = errors.New("empty line")
-
-// Função que recebe a linha em assembly e separa em rótulo, operações/instruções.
-func parseAsmLine(rawLine string) (line InLine, err error) {
-	label, code, labeled := strings.Cut(rawLine, ":")
-	if !labeled {
-		code = label
-		label = ""
-	}
-	// ignore comments
-	code, _, _ = strings.Cut(code, ";")
-	fields := strings.Fields(code)
-	if len(fields) < 1 {
-		return InLine{}, EmptyLineErr
-	}
-	return InLine{
-		raw:   rawLine,
-		label: label,
-		op:    fields[0],
-		args:  fields[min(len(fields), 1):],
-	}, nil
-}
-
 type ReprKind uint8
 
 const (
@@ -173,57 +143,41 @@ type Repr struct {
 
 func (info *Info) FirstPassString(rawLine string) (reprs []Repr, err error) {
 	line := strings.TrimSpace(rawLine)
-	parsedLine, err := parseAsmLine(line)
+	parsedLine, err := dubcc.ParseAsmLine(line)
 	if err != nil {
 		return nil, err
 	}
 	return info.FirstPass(parsedLine)
 }
 
-func (info *Info) FirstPass(line InLine) ([]Repr, error) {
-	if info.macroLevel > 0 {
-		return info.handleMacro(line)
-	}
-	if line.op == "MACRO" {
-		info.macroLevel++
-		return nil, nil
-	}
-	idata, ifound := info.isa.Instructions[line.op]
+func (info *Info) FirstPass(line dubcc.InLine) ([]Repr, error) {
+	idata, ifound := info.isa.Instructions[line.Op]
 	if ifound { //Try instruction
 		return info.handleInstruction(line, idata)
 	}
 
-	directive, dfound := info.directives[line.op]
+	directive, dfound := info.directives[line.Op]
 	if dfound { //Try the directive
 		directive.f(info, line)
 		return nil, nil
 	}
 
-	macro, mfound := info.macros[line.op]
-	if mfound { //This shit has to be a macro, right?
-		return info.expandAndRunMacro(macro, line)
-	}
-	if line.op == "MEND" { //De preferência, deixar como último teste
-		return nil, errors.New("End of macro before start.")
-	}
-
-	log.Printf("Warning: Invalid operation: %v", line.op)
+	log.Printf("Warning: Invalid operation: %v", line.Op)
 	return nil, nil
-
 }
 
-func (info *Info) handleInstruction(line InLine, idata dubcc.Instruction) ([]Repr, error) {
+func (info *Info) handleInstruction(line dubcc.InLine, idata dubcc.Instruction) ([]Repr, error) {
 	r := make([]Repr, 1+idata.NumArgs)
-	if int(idata.NumArgs) != len(line.args) {
+	if int(idata.NumArgs) != len(line.Args) {
 		return nil, errors.New("number of arguments doesn't match")
 	}
 	r[0] = Repr{
 		tag:   ReprComplete,
-		input: line.op,
+		input: line.Op,
 		out:   idata.Repr,
 	}
 
-	for index, arg := range line.args {
+	for index, arg := range line.Args {
 		index += 1
 		repr := &r[index]
 
@@ -273,8 +227,8 @@ func (info *Info) handleInstruction(line InLine, idata dubcc.Instruction) ([]Rep
 		// signify indirect mode and implement it
 	}
 
-	if line.label != "" {
-		info.registerLabel(line.label)
+	if line.Label != "" {
+		info.registerLabel(line.Label)
 	}
 
 	for _, repr := range r {
@@ -285,37 +239,6 @@ func (info *Info) handleInstruction(line InLine, idata dubcc.Instruction) ([]Rep
 	info.line_counter = dubcc.MachineAddress(len(info.output))
 
 	return r, nil
-}
-
-func (info *Info) handleMacro(line InLine) (reprs []Repr, err error) {
-	if len(info.macroStack) < info.macroLevel { //Se for a primeira linha...
-		for len(info.macroStack) < info.macroLevel {
-			info.macroStack = append(info.macroStack, MacroFrame{})
-		}
-		info.macroStack[info.macroLevel-1] = MacroFrame{
-			name: line.op,
-			args: line.args,
-			body: []string{},
-		}
-		return nil, nil
-	}
-
-	if line.op == "MEND" { //Aqui, toda macro foi lida e o MEND vai fechar a macro
-		info.macroLevel--
-		frame := info.macroStack[info.macroLevel]
-		macro := Macros{
-			args:      frame.args,
-			body:      frame.body,
-			definedAt: info.line_counter,
-		}
-
-		info.macroStack = slices.Delete(info.macroStack, info.macroLevel, info.macroLevel+1)
-		info.macros[frame.name] = macro
-		return nil, nil
-	}
-	frame := &info.macroStack[info.macroLevel-1]
-	frame.body = append(frame.body, line.raw)
-	return nil, nil
 }
 
 func (info *Info) SecondPass() map[string]dubcc.MachineAddress {
@@ -377,43 +300,6 @@ func (info *Info) registerConst(name string, val dubcc.MachineWord) {
 	}
 	info.output = append(info.output, val)
 	info.line_counter += 1
-}
-
-func (info *Info) expandAndRunMacro(macro Macros, line InLine) ([]Repr, error) {
-	if len(line.args) != len(macro.args) {
-		return nil, errors.New("number of arguments doesn't match")
-	}
-
-	substitutions := make(map[string]string)
-	for i, formal := range macro.args {
-		substitutions[formal] = line.args[i]
-	}
-
-	var allReprs []Repr
-
-	for _, raw := range macro.body {
-
-		words := strings.Split(raw, " ")
-		for i, word := range words {
-			wdata, wfound := substitutions[word]
-			if wfound {
-				words[i] = wdata
-			}
-		}
-		expanded := strings.Join(words, " ")
-
-		parsedLine, err := parseAsmLine(expanded)
-		if err != nil {
-			return nil, err
-		}
-		reprs, err := info.FirstPass(parsedLine)
-		if err != nil {
-			return nil, err
-		}
-		allReprs = append(allReprs, reprs...)
-	}
-	log.Print(allReprs)
-	return allReprs, nil
 }
 
 type ObjectInfo struct {
@@ -601,18 +487,18 @@ func (obj *ObjectFile) Write(w io.Writer) error {
 func Directives() map[string]DirectiveHandler {
 	return map[string]DirectiveHandler{
 		"space": {
-			f: func(info *Info, line InLine) {
-				info.registerConst(line.label, 0)
+			f: func(info *Info, line dubcc.InLine) {
+				info.registerConst(line.Label, 0)
 			},
 			numArgs: 0,
 		},
 		"const": {
-			f: func(info *Info, line InLine) {
-				num, err := parseNum(line.args[0])
+			f: func(info *Info, line dubcc.InLine) {
+				num, err := parseNum(line.Args[0])
 				if err != nil {
-					log.Fatalf("can't decide value for const %v: %v", line.label, err)
+					log.Fatalf("can't decide value for const %v: %v", line.Label, err)
 				}
-				info.registerConst(line.label, dubcc.MachineWord(num))
+				info.registerConst(line.Label, dubcc.MachineWord(num))
 			},
 			numArgs: 1,
 		},
@@ -658,11 +544,11 @@ func Directives() map[string]DirectiveHandler {
 			numArgs: 1,
 		},
 		"start": {
-			f: func(info *Info, line InLine) {
-				if len(line.args) != 1 {
-					log.Fatalf("start directive requires one argument (address), got %d", len(line.args))
+			f: func(info *Info, line dubcc.InLine) {
+				if len(line.Args) != 1 {
+					log.Fatalf("start directive requires one argument (address), got %d", len(line.Args))
 				}
-				addrStr := line.args[0]
+				addrStr := line.Args[0]
 				addr, err := parseNum(addrStr)
 				if err != nil {
 					log.Fatalf("invalid start address: %v", err)

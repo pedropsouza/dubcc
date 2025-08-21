@@ -1,6 +1,7 @@
 package main
 
 import (
+	"dubcc"
 	"bufio"
 	"bytes"
 	assembler "dubcc/assembler"
@@ -30,13 +31,10 @@ func main() {
 		outLine, err := info.FirstPassString(line)
 		pp.Fprintf(os.Stderr, "processing %v... ", line)
 		if err != nil {
-			if err != assembler.EmptyLineErr {
+			if err != dubcc.EmptyLineErr {
 				log.Println(err)
 			}
 			continue
-		}
-		if err != nil {
-			log.Println(err)
 		}
 		pp.Fprintf(os.Stderr, "%v\n", outLine)
 	}

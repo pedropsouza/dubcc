@@ -1,5 +1,9 @@
 package dubcc
 
+import (
+	"strings"
+)
+
 type (
 	MachineAddress = uint64
 	MachineWord    = uint16
@@ -18,6 +22,34 @@ func GetDefaultISA() ISA {
 }
 
 type InstHandler func(*Sim, []MachineWord)
+
+type InLine struct {
+	Raw   string   //Linha original
+	Label string   //Rótulo
+	Op    string   //Operação (instrução ou diretiva)
+	Args  []string //Argumentos
+}
+
+// Função que recebe a linha em assembly e separa em rótulo, operações/instruções.
+func ParseAsmLine(rawLine string) (line InLine, err error) {
+	label, code, labeled := strings.Cut(rawLine, ":")
+	if !labeled {
+		code = label
+		label = ""
+	}
+	// ignore comments
+	code, _, _ = strings.Cut(code, ";")
+	fields := strings.Fields(code)
+	if len(fields) < 1 {
+		return InLine{}, EmptyLineErr
+	}
+	return InLine{
+		Raw:   rawLine,
+		Label: label,
+		Op:    fields[0],
+		Args:  fields[min(len(fields), 1):],
+	}, nil
+}
 
 type Sim struct {
 	Mem       SimMem
