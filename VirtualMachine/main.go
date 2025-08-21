@@ -38,7 +38,7 @@ var sim dubcc.Sim
 var assemblerSingleton assembler.Info
 var assemblerInfo assembler.Info
 
-//go:embed logoData.png
+//go:embed appicon.png
 var logoData []byte
 
 type MenuBar struct {
@@ -129,11 +129,6 @@ func run(window *app.Window) error {
 var logoWidget widget.Image
 
 func init() {
-	var err error
-	logoData, err = os.ReadFile("logoData.png")
-	if err != nil {
-		log.Fatalf("Erro ao ler o arquivo: %v", err)
-	}
 	img, err := png.Decode(bytes.NewReader(logoData))
 	if err != nil {
 		log.Fatalf("Falha ao decodificar a imagem: %v", err)
