@@ -3,7 +3,14 @@ package main
 import (
 	"dubcc"
 	"dubcc/assembler"
+	"dubcc/macroprocessor"
 	"encoding/binary"
+	"image"
+	"image/color"
+	"log"
+	"os"
+	"strings"
+
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -12,11 +19,6 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"image"
-	"image/color"
-	"log"
-	"os"
-	"strings"
 )
 
 func (mb *MenuBar) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
@@ -196,7 +198,7 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 					log.Printf("reset!")
 					sim.State = dubcc.SimStateRun
 					sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
-					startAddressMachineWord := dubcc.MachineWord(assemblerInfo.StartAddress)
+					startAddressMachineWord := dubcc.MachineWord(assemblerSingleton.StartAddress)
 					sim.SetRegister(dubcc.RegPC, startAddressMachineWord)
 					WipeMemory()
 				}
@@ -208,16 +210,32 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 
 func CompileCode() {
 	sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
-	assemblerInfo = assembler.MakeAssembler()
 
-	for _, line := range strings.Split(editor.state.Text(), "\n") {
-		assemblerInfo.FirstPassString(line)
+	macroProcessor := macroprocessor.MakeMacroProcessor()
+	for line := range strings.SplitSeq(editor.state.Text(), "\n") {
+		macroProcessor.ProcessLine(line)
 	}
-	assemblerInfo.SecondPass()
+
+	assemblerSingleton = assembler.MakeAssembler()
+
+	{
+		masmaprg, err := os.Create("MASMAPRG.ASM")
+		if err != nil {
+			log.Printf("couldn't create macro expansion file MASMAPRG.ASM! Ignoring.")
+		} else {
+			defer masmaprg.Close()
+		}
+		for _, line := range macroProcessor.GetOutput() {
+			masmaprg.WriteString(line)
+			assemblerSingleton.FirstPassString(line)
+		}
+	}
+
+	assemblerSingleton.SecondPass()
 
 	// TODO: do we call CompileCode() to each file or for a group of files ??
 	objFilename := "test.o"
-	obj, err := assemblerInfo.GenerateObjectFile()
+	obj, err := assemblerSingleton.GenerateObjectFile()
 	if err != nil {
 		log.Fatalf("error: could not compile: %v", err)
 	}
@@ -229,15 +247,15 @@ func CompileCode() {
 	}
 
 	// NOTE: i believe here the linker is called to build the memory image
-	mem := assemblerInfo.GetOutput()
+	mem := assemblerSingleton.GetOutput()
 
 	if len(mem) > len(sim.Mem.Work) {
 		panic("program's too big")
 	}
 
-	startAddressMachineWord := dubcc.MachineWord(assemblerInfo.StartAddress)
+	startAddressMachineWord := dubcc.MachineWord(assemblerSingleton.StartAddress)
 	sim.SetRegister(dubcc.RegPC, startAddressMachineWord) // Altera o valor do PC pro valor indicado na diretiva "start"
-	startAddressInt := int(assemblerInfo.StartAddress)
+	startAddressInt := int(assemblerSingleton.StartAddress)
 
 	// NOTE: loader starts here
 	for idx, val := range mem {

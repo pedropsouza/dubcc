@@ -46,23 +46,23 @@ func (info *Info) ProcessLine(rawline string) (err error) {
 	line, err := dubcc.ParseAsmLine(rawline)
 	if line.Op == "MACRO" {
 		info.macroLevel++
-		return
+		return nil
 	}
 	if info.macroLevel > 0 {
 		return info.handleMacroDef(line)
 	}
 
+	expansion := line.Raw
 	macro, mfound := info.macros[line.Op]
 	if mfound { //This shit has to be a macro, right?
-		expansion, err := info.expandAndRunMacro(macro, line)
-		info.output = append(info.output, expansion)
-		return err
+		expansion, err = info.expandAndRunMacro(macro, line)
+		if err != nil { return err }
 	}
 	if line.Op == "MEND" { //De preferência, deixar como último teste
 		return errors.New("End of macro before start.")
 	}
 
-	log.Printf("Warning: Invalid operation: %v", line.Op)
+	info.output = append(info.output, expansion)
 	return nil
 }
 

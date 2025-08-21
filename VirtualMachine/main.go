@@ -36,7 +36,6 @@ var fe = NewFileExplorer()
 var memCap dubcc.MachineAddress
 var sim dubcc.Sim
 var assemblerSingleton assembler.Info
-var assemblerInfo assembler.Info
 
 //go:embed appicon.png
 var logoData []byte
