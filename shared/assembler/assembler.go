@@ -33,6 +33,7 @@ type Info struct {
 	output        []dubcc.MachineWord
 	line_counter  dubcc.MachineAddress
 	StartAddress  dubcc.MachineAddress
+	stackSize			dubcc.MachineAddress
 	moduleEnded   bool
 }
 
@@ -465,7 +466,6 @@ func (info *Info) GenerateObjectFile() (*ObjectFile, error) {
 	obj.Header.SectionCount = uint16(len(obj.Sections))
 	obj.Header.SymbolCount = uint16(len(obj.Symbols))
 	obj.Header.RelocCount = uint16(len(obj.Relocations))
-	obj.Header.EntryPoint = info.StartAddress
 	
 	return obj, nil
 }
@@ -599,7 +599,7 @@ func (obj *ObjectFile) Write(w io.Writer) error {
 }
 
 func Directives() map[string]DirectiveHandler {
-	return map[string]DirectiveHandler{ //TODO adicionar as outras.
+	return map[string]DirectiveHandler{
 		"space": {
 			f: func(info *Info, line InLine) {
 				info.registerConst(line.label, 0)
@@ -616,13 +616,46 @@ func Directives() map[string]DirectiveHandler {
 			},
 			numArgs: 1,
 		},
-		"MACRO": {
-			f:       func(info *Info, line InLine) {},
+		"end": {
+			f: func(info *Info, line InLine) {
+				info.moduleEnded = true
+				moduleEnded = true
+				log.Printf("module ended at address 0x%x", info.line_counter)
+			},
 			numArgs: 0,
 		},
-		"MEND": {
-			f:       func(info *Info, line InLine) {},
+		"extdef": {
+			f: func(info *Info, line InLine) {
+				symbolName := line.args[0]
+				globalSymbols[symbolName] = true
+				log.Printf("declared global symbol: %s", symbolName)
+				if addr, exists := info.symbols[symbolName]; exists {
+					log.Printf("symbol %s already defined at 0x%x, marking as global", symbolName, addr)
+				}
+			},
+			numArgs: 1,
+		},
+		"extr": {
+			f: func(info *Info, line InLine) {
+				if line.label == "" {
+					log.Fatalf("extr directive requires a label")
+				}
+				externSymbols[line.label] = true
+				log.Printf("declared external symbol: %s", line.label)
+			},
 			numArgs: 0,
+		},
+		"stack": {
+			f: func(info *Info, line InLine) {
+				num, err := parseNum(line.args[0])
+				if err != nil {
+					log.Fatalf("can't parse stack size %v: %v", line.args[0], err)
+				}
+				stackSize := dubcc.MachineAddress(num)
+				maxStackSize = &stackSize
+				log.Printf("set maximum stack size to %d words", stackSize)
+			},
+			numArgs: 1,
 		},
 		"start": {
 			f: func(info *Info, line InLine) {
@@ -635,9 +668,16 @@ func Directives() map[string]DirectiveHandler {
 					log.Fatalf("invalid start address: %v", err)
 				}
 				info.StartAddress = dubcc.MachineAddress(addr)
-
 			},
 			numArgs: 1,
+		},
+		"MACRO": {
+			f:       func(info *Info, line InLine) {},
+			numArgs: 0,
+		},
+		"MEND": {
+			f:       func(info *Info, line InLine) {},
+			numArgs: 0,
 		},
 	}
 }

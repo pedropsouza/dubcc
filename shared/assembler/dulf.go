@@ -1,8 +1,6 @@
 package assembler
 
-import (
-	"dubcc"
-)
+import "dubcc"
 
 type DulfSection    uint32
 type SymbolBinding  uint8
@@ -14,7 +12,7 @@ const (
 	SHT_SYMTAB                        // symbol table (not using yet)
 	SHT_STRTAB                        // string table (not using yet)
 	SHT_RELA                          // relocation entries (not using yet)
-	SHT_NOBITS                       // uninitialized data (BSS) (not using yet)
+	SHT_NOBITS                        // uninitialized data (BSS) (not using yet)
 )
 
 const (
@@ -35,42 +33,41 @@ const (
 )
 
 type DulfHeader struct {
-	Magic         [4]byte              // magic number "DULF"
-	SectionCount  uint16               // number of sections
-	SymbolCount   uint16               // number of symbols
-	RelocCount    uint16               // number of relocations
-	EntryPoint    dubcc.MachineAddress // entry point address
-	SectionOffset uint32               // offset to section headers
-	SymbolOffset  uint32               // offset to symbol table
-	RelocOffset   uint32               // offset to relocation table
-	StringOffset  uint32               // offset to string table
+	Magic         [4]byte	// magic number "DULF"
+	SectionCount  uint16 	// number of sections
+	SymbolCount   uint16 	// number of symbols
+	RelocCount    uint16 	// number of relocations
+	SectionOffset uint32 	// offset to section headers
+	SymbolOffset  uint32 	// offset to symbol table
+	RelocOffset   uint32 	// offset to relocation table
+	StringOffset  uint32 	// offset to string table
 }
 
 type SectionHeader struct {
 	NameOffset uint32                   // offset in string table
-	Type       DulfSection              // section type
-	Flags      uint32                   // section flags
-	Address    dubcc.MachineAddress     // virtual address
-	Offset     uint32                   // file offset
-	Size       uint32                   // size in bytes
-	Link       uint32                   // link to another section
-	Info       uint32                   // additional info
-	Alignment  uint32                   // address alignment
+	Type       DulfSection  		// section type
+	Flags      uint32       		// section flags
+	Address    dubcc.MachineAddress	// virtual address
+	Offset     uint32       		// file offset
+	Size       uint32       		// size in bytes
+	Link       uint32       		// link to another section
+	Info       uint32       		// additional info
+	Alignment  uint32       		// address alignment
 }
 
 type Symbol struct {
-	NameOffset uint32                   // offset in string table
-	Value      dubcc.MachineAddress     // symbol value
-	Size       uint32                   // symbol size
-	Info       uint8                    // symbol type and binding
-	Other      uint8                    // reserved
-	Section    uint16                   // section index
+	NameOffset uint32      			// offset in string table
+	Value      dubcc.MachineAddress	// symbol value
+	Size       uint32       		// symbol size
+	Info       uint8        		// symbol type and binding
+	Other      uint8        		// reserved
+	Section    uint16       		// section index
 }
 
 type Relocation struct {
 	Offset     dubcc.MachineAddress // location to relocate
-	Info       uint32               // relocation type and symbol index
-	Addend     int64                // for relocation
+	Info       uint32         // relocation type and symbol index
+	Addend     int64          // for relocation
 	SymbolName string
 }
 
