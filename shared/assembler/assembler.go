@@ -503,7 +503,7 @@ func Directives() map[string]DirectiveHandler {
 			numArgs: 1,
 		},
 		"end": {
-			f: func(info *Info, line InLine) {
+			f: func(info *Info, line dubcc.InLine) {
 				info.moduleEnded = true
 				moduleEnded = true
 				log.Printf("module ended at address 0x%x", info.line_counter)
@@ -511,8 +511,8 @@ func Directives() map[string]DirectiveHandler {
 			numArgs: 0,
 		},
 		"extdef": {
-			f: func(info *Info, line InLine) {
-				symbolName := line.args[0]
+			f: func(info *Info, line dubcc.InLine) {
+				symbolName := line.Args[0]
 				globalSymbols[symbolName] = true
 				log.Printf("declared global symbol: %s", symbolName)
 				if addr, exists := info.symbols[symbolName]; exists {
@@ -522,20 +522,20 @@ func Directives() map[string]DirectiveHandler {
 			numArgs: 1,
 		},
 		"extr": {
-			f: func(info *Info, line InLine) {
-				if line.label == "" {
+			f: func(info *Info, line dubcc.InLine) {
+				if line.Label == "" {
 					log.Fatalf("extr directive requires a label")
 				}
-				externSymbols[line.label] = true
-				log.Printf("declared external symbol: %s", line.label)
+				externSymbols[line.Label] = true
+				log.Printf("declared external symbol: %s", line.Label)
 			},
 			numArgs: 0,
 		},
 		"stack": {
-			f: func(info *Info, line InLine) {
-				num, err := parseNum(line.args[0])
+			f: func(info *Info, line dubcc.InLine) {
+				num, err := parseNum(line.Args[0])
 				if err != nil {
-					log.Fatalf("can't parse stack size %v: %v", line.args[0], err)
+					log.Fatalf("can't parse stack size %v: %v", line.Args[0], err)
 				}
 				stackSize := dubcc.MachineAddress(num)
 				maxStackSize = &stackSize
@@ -558,11 +558,11 @@ func Directives() map[string]DirectiveHandler {
 			numArgs: 1,
 		},
 		"MACRO": {
-			f:       func(info *Info, line InLine) {},
+			f:       func(info *Info, line dubcc.InLine) {},
 			numArgs: 0,
 		},
 		"MEND": {
-			f:       func(info *Info, line InLine) {},
+			f:       func(info *Info, line dubcc.InLine) {},
 			numArgs: 0,
 		},
 	}
