@@ -33,11 +33,20 @@ func mainLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 					return layout.Flex{Axis: layout.Horizontal}.Layout(
 						gtx,
-						layout.Rigid(layout.Spacer{Width: unit.Dp(16)}.Layout),
-						layout.Flexed(0.70, func(gtx layout.Context) layout.Dimensions { return centerLayout(gtx, th) }),
-						layout.Rigid(layout.Spacer{Width: unit.Dp(16)}.Layout),
-						layout.Flexed(0.30, func(gtx layout.Context) layout.Dimensions { return rightLayout(gtx, th) }),
-						layout.Rigid(layout.Spacer{Width: unit.Dp(16)}.Layout),
+						layout.Flexed(0.70, func(gtx layout.Context) layout.Dimensions {
+							// Adiciona padding nas laterais do layout central
+							inset := layout.Inset{Left: unit.Dp(16), Right: unit.Dp(8)}
+							return inset.Layout(gtx, func(gtx C) D {
+								return centerLayout(gtx, th)
+							})
+						}),
+						layout.Flexed(0.30, func(gtx layout.Context) layout.Dimensions {
+							// Adiciona padding nas laterais do layout direito
+							inset := layout.Inset{Left: unit.Dp(8), Right: unit.Dp(16)}
+							return inset.Layout(gtx, func(gtx C) D {
+								return rightLayout(gtx, th)
+							})
+						}),
 					)
 				}),
 			)
@@ -108,16 +117,27 @@ func centerLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 	}.Layout(gtx,
 		layout.Flexed(0.4, func(gtx layout.Context) layout.Dimensions {
 			colWeights := []float32{0.2, 0.15, 0.35, 0.3}
-			return layout.UniformInset(unit.Dp(0)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layout.Inset{
+				Left: unit.Dp(8),
+			}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return TextWithTable(gtx, th, "MEMÓRIA", red, &tableMemory, colWeights)
 			})
 		}),
+		layout.Rigid(
+			layout.Spacer{Height: unit.Dp(16)}.Layout,
+		),
 		layout.Flexed(0.4, func(gtx layout.Context) layout.Dimensions {
 			return textLayout(gtx, th, "CÓDIGO")
 		}),
-		layout.Flexed(0.05, func(gtx layout.Context) layout.Dimensions {
-			return ColorBox(gtx, gtx.Constraints.Max, red)
+		layout.Rigid(
+			layout.Spacer{Height: unit.Dp(16)}.Layout,
+		),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return actionButtonsLayout(gtx, th)
 		}),
+		layout.Rigid(
+			layout.Spacer{Height: unit.Dp(16)}.Layout,
+		),
 	)
 }
 
@@ -130,15 +150,6 @@ func rightLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 				colWeights := []float32{0.33, 0.33, 0.33}
 				return TextWithTable(gtx, th, "REGISTRADORES", red, &tableRegisters, colWeights)
 			}),
-		layout.Rigid(
-			layout.Spacer{Height: unit.Dp(32)}.Layout,
-		),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return actionButtonsLayout(gtx, th)
-		}),
-		layout.Rigid(
-			layout.Spacer{Height: unit.Dp(32)}.Layout,
-		),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return logoWidget.Layout(gtx) }),
 	)
 }

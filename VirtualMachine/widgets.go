@@ -3,11 +3,6 @@ package main
 import (
 	"dubcc"
 	"dubcc/assembler"
-	"image"
-	"image/color"
-	"log"
-	"strings"
-	"os"
 	"encoding/binary"
 	"gioui.org/font"
 	"gioui.org/layout"
@@ -17,31 +12,37 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"image"
+	"image/color"
+	"log"
+	"os"
+	"strings"
 )
 
 func (mb *MenuBar) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 	bar := layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+		layout.Rigid(layout.Spacer{Width: unit.Dp(24)}.Layout),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			if mb.fileBtn.Clicked(gtx) {
 				mb.showFileMenu = !mb.showFileMenu
 			}
-			btn := material.Button(th, &mb.fileBtn, "File")
+			btn := FlatButton(th, &mb.fileBtn, "File")
 			btn.Background = yellow
 			btn.Color = black
 			btn.Font.Typeface = customFont
 			return btn.Layout(gtx)
 		}),
-		layout.Rigid(layout.Spacer{Width: unit.Dp(6)}.Layout),
+		//layout.Rigid(layout.Spacer{Width: unit.Dp(6)}.Layout),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			btn := material.Button(th, &mb.editBtn, "Edit")
+			btn := FlatButton(th, &mb.editBtn, "Edit")
 			btn.Background = yellow
 			btn.Color = black
 			btn.Font.Typeface = customFont
 			return btn.Layout(gtx)
 		}),
-		layout.Rigid(layout.Spacer{Width: unit.Dp(6)}.Layout),
+		//layout.Rigid(layout.Spacer{Width: unit.Dp(6)}.Layout),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			btn := material.Button(th, &mb.helpBtn, "Help")
+			btn := FlatButton(th, &mb.helpBtn, "Help")
 			btn.Background = yellow
 			btn.Color = black
 			btn.Font.Typeface = customFont
@@ -91,16 +92,13 @@ func (mb *MenuBar) renderFileMenu(gtx layout.Context, th *material.Theme) layout
 }
 func textLayout(gtx layout.Context, th *material.Theme, title string) layout.Dimensions {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Flexed(0.15, func(gtx layout.Context) layout.Dimensions {
-			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-				layout.Flexed(0.15, func(gtx layout.Context) layout.Dimensions {
-					return FillWithLabel(gtx, th, title, red, 16)
-				}),
-				layout.Flexed(0.85, func(gtx layout.Context) layout.Dimensions {
-					return FillWithText(gtx, th, "Digite aqui...", white)
-				}),
-			)
-		}))
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return FillWithLabel(gtx, th, title, red, 16)
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return FillWithText(gtx, th, "Digite aqui...", white)
+		}),
+	)
 }
 
 func TextWithTable(gtx layout.Context, th *material.Theme, title string, bg color.NRGBA, table *Table, colWeights []float32) layout.Dimensions {
@@ -109,9 +107,7 @@ func TextWithTable(gtx layout.Context, th *material.Theme, title string, bg colo
 			return FillWithLabel(gtx, th, title, red, 16)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return layout.UniformInset(unit.Dp(0)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return table.Draw(gtx, th, colWeights)
-			})
+			return table.Draw(gtx, th, colWeights)
 		}),
 	)
 }
@@ -149,12 +145,12 @@ func ColorBox(gtx layout.Context, size image.Point, c color.NRGBA) layout.Dimens
 }
 
 func TextButton(th *material.Theme, btn *widget.Clickable, label string) material.ButtonStyle {
-	 b := material.Button(th, btn, label)
-	 b.Background = color.NRGBA{}
-	 b.Color = black
-	 b.Inset = layout.UniformInset(unit.Dp(4))
-	 b.CornerRadius = unit.Dp(0)
-	 return b
+	b := material.Button(th, btn, label)
+	b.Background = color.NRGBA{}
+	b.Color = black
+	b.Inset = layout.UniformInset(unit.Dp(4))
+	b.CornerRadius = unit.Dp(0)
+	return b
 }
 
 func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
@@ -308,11 +304,21 @@ func saveCompleteObjectFile(obj *assembler.ObjectFile, filename string) error {
 		return err
 	}
 	defer file.Close()
-	
+
 	return obj.Write(file)
 }
 
 // in case we need just the raw assembler output
 func saveObjectFile(data []dubcc.MachineWord, filename string) error {
 	return os.WriteFile(filename, machineWordsToBytes(data), 0644)
+}
+
+func FlatButton(th *material.Theme, btn *widget.Clickable, label string) material.ButtonStyle {
+	b := material.Button(th, btn, label)
+	b.Background = yellow
+	b.Color = black
+	b.Inset = layout.UniformInset(unit.Dp(4)) // deixa mais fino (default é ~8)
+	b.CornerRadius = unit.Dp(0)               // deixa quadrado
+	b.Font.Typeface = customFont
+	return b
 }
