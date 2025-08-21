@@ -89,10 +89,7 @@ func (ed *EditorApp) Layout(gtx C, th *material.Theme) D {
 
 		// has the code settled?
 		if hash != lastAnalysisHash && time.Since(lastEditTime) > time.Second*1 {
-			assemblerSingleton = assembler.MakeAssembler()
-			for line := range strings.SplitSeq(editor.state.Text(), "\n") {
-				assemblerSingleton.FirstPassString(line)
-			}
+			CompileCode()
 			lastAnalysisHash = hash
 		}
 	}

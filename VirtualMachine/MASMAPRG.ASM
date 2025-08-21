@@ -1,0 +1,1 @@
+add 20copy 30 20sub 8load 2call facstop

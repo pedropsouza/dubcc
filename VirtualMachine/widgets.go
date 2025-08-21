@@ -3,7 +3,15 @@ package main
 import (
 	"dubcc"
 	"dubcc/assembler"
+	"dubcc/macroprocessor"
 	"encoding/binary"
+	"image"
+	"image/color"
+	"log"
+	"os"
+	"strings"
+	"math/rand"
+	"time"
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -12,13 +20,6 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"image"
-	"image/color"
-	"log"
-	"os"
-	"strings"
-	"math/rand"
-	"time"
 )
 
 func (mb *MenuBar) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
@@ -210,6 +211,7 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 
 func CompileCode() {
 	sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
+	macroProcessor := macroprocessor.MakeMacroProcessor()
 	var assemblers = make([]assembler.Info, len(sources))
 
 	for _, source := range sources {
@@ -222,6 +224,27 @@ func CompileCode() {
 
 		rand.Seed(time.Now().UnixNano())
     n := rand.Int()
+
+		for line := range strings.SplitSeq(editor.state.Text(), "\n") {
+			macroProcessor.ProcessLine(line)
+		}
+
+		assemblerSingleton = assembler.MakeAssembler()
+
+		{
+			masmaprg, err := os.Create("MASMAPRG.ASM")
+			if err != nil {
+				log.Printf("couldn't create macro expansion file MASMAPRG.ASM! Ignoring.")
+			} else {
+				defer masmaprg.Close()
+			}
+			for _, line := range macroProcessor.GetOutput() {
+				masmaprg.WriteString(line)
+				assemblerSingleton.FirstPassString(line)
+			}
+		}
+
+		assemblerSingleton.SecondPass()
 
 		obj_filename := "test-" + string(n) + ".o"
 		obj, err := asm.GenerateObjectFile()
@@ -248,7 +271,6 @@ func CompileCode() {
 	if len(mem) > len(sim.Mem.Work) {
 		panic("program's too big")
 	}
-
 	startAddressMachineWord := dubcc.MachineWord(assemblers[0].StartAddress)
 	sim.SetRegister(dubcc.RegPC, startAddressMachineWord) // Altera o valor do PC pro valor indicado na diretiva "start"
 	startAddressInt := int(assemblers[0].StartAddress)
