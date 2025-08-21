@@ -5,7 +5,6 @@ import (
 	"dubcc"
 	"dubcc/assembler"
 	_ "embed"
-	"fmt"
 	"gioui.org/app"
 	"gioui.org/op"
 	"gioui.org/op/paint"
@@ -19,6 +18,7 @@ import (
 	_ "image/png"
 	"log"
 	"os"
+	"github.com/k0kubun/pp/v3"
 )
 
 var window *app.Window
@@ -50,10 +50,10 @@ type MenuBar struct {
 }
 
 func main() {
-	memCap = dubcc.MachineAddress(1 << 6)
+	memCap = dubcc.MachineAddress(1 << 10)
 	sim = dubcc.MakeSim(memCap)
 	assemblerSingleton = assembler.MakeAssembler()
-	fmt.Println(sim)
+	pp.Print(sim)
 	InitTables(&sim)
 	editor = EditorApp{}
 	th = material.NewTheme()

@@ -17,6 +17,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"github.com/k0kubun/pp/v3"
 )
 
 func (mb *MenuBar) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
@@ -214,6 +215,7 @@ func CompileCode() {
 		assemblerInfo.FirstPassString(line)
 	}
 	assemblerInfo.SecondPass()
+	pp.Print(assemblerInfo)
 
 	// TODO: do we call CompileCode() to each file or for a group of files ??
 	objFilename := "test.o"

@@ -5,4 +5,4 @@ assembler/assembler
 assembler/assembler-bin
 simulator/simulator
 VirtualMachine/VirtualMachine
-VirtualMachine/*.o
+VirtualMachine/test.o
