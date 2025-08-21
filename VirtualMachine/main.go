@@ -33,6 +33,8 @@ var th *material.Theme
 var assembleBtn, stepBtn, resetBtn widget.Clickable
 var menuBar MenuBar
 var hexView = false
+var terminal *Terminal
+
 var showExplorer bool
 var fe = NewFileExplorer()
 var memCap dubcc.MachineAddress
@@ -103,6 +105,7 @@ func main() {
 }
 
 func run(window *app.Window) error {
+	terminal = NewTerminal(th)
 	var ops op.Ops
 
 	customScheme := createCustomColorScheme(th)
