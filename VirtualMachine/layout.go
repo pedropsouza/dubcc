@@ -116,18 +116,23 @@ func centerLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 		Axis: layout.Vertical,
 	}.Layout(gtx,
 		layout.Flexed(0.4, func(gtx layout.Context) layout.Dimensions {
-			colWeights := []float32{0.2, 0.15, 0.35, 0.3}
-			return layout.Inset{
-				Left: unit.Dp(8),
-			}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return TextWithTable(gtx, th, "MEMÓRIA", red, &tableMemory, colWeights)
-			})
+			if hexView {
+				UpdateHexViewer() // Update with current memory state
+				return HexViewerWithTitle(gtx, th, "MEMORY HEX VIEW", hexViewer)
+			} else {
+				colWeights := []float32{0.2, 0.15, 0.35, 0.3}
+				return layout.Inset{
+					Left: unit.Dp(8),
+				}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+					return TextWithTable(gtx, th, "MEMORY", red, &tableMemory, colWeights)
+				})
+			}
 		}),
 		layout.Rigid(
 			layout.Spacer{Height: unit.Dp(16)}.Layout,
 		),
 		layout.Flexed(0.4, func(gtx layout.Context) layout.Dimensions {
-			return textLayout(gtx, th, "CÓDIGO")
+			return textLayout(gtx, th, "CODE")
 		}),
 		layout.Rigid(
 			layout.Spacer{Height: unit.Dp(16)}.Layout,
@@ -148,7 +153,7 @@ func rightLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 		layout.Rigid(
 			func(gtx layout.Context) layout.Dimensions {
 				colWeights := []float32{0.33, 0.33, 0.33}
-				return TextWithTable(gtx, th, "REGISTRADORES", red, &tableRegisters, colWeights)
+				return TextWithTable(gtx, th, "REGISTERS", red, &tableRegisters, colWeights)
 			}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return logoWidget.Layout(gtx) }),
 	)
