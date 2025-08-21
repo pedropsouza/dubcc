@@ -4,6 +4,7 @@ import (
 	"dubcc"
 	"dubcc/assembler"
 	"encoding/binary"
+	"fmt"
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -32,15 +33,22 @@ func (mb *MenuBar) Layout(gtx layout.Context, th *material.Theme) layout.Dimensi
 			btn.Font.Typeface = customFont
 			return btn.Layout(gtx)
 		}),
-		//layout.Rigid(layout.Spacer{Width: unit.Dp(6)}.Layout),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			btn := FlatButton(th, &mb.editBtn, "Edit")
+			if mb.hexBtn.Clicked(gtx) {
+				hexView = !hexView
+			}
+			btnText := "Hex" // Texto padrão
+			if hexView {
+				btnText = "List"
+			}
+
+			btn := FlatButton(th, &mb.hexBtn, btnText)
 			btn.Background = yellow
 			btn.Color = black
 			btn.Font.Typeface = customFont
 			return btn.Layout(gtx)
 		}),
-		//layout.Rigid(layout.Spacer{Width: unit.Dp(6)}.Layout),
+
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			btn := FlatButton(th, &mb.helpBtn, "Help")
 			btn.Background = yellow
@@ -320,5 +328,149 @@ func FlatButton(th *material.Theme, btn *widget.Clickable, label string) materia
 	b.Inset = layout.UniformInset(unit.Dp(4)) // deixa mais fino (default é ~8)
 	b.CornerRadius = unit.Dp(0)               // deixa quadrado
 	b.Font.Typeface = customFont
+	return b
+}
+
+const (
+	addressWidthDP = unit.Dp(70)
+	hexCellWidthDP = unit.Dp(55)
+)
+
+type HexViewer struct {
+	widget       widget.List
+	bytesPerRow  int
+	startAddress dubcc.MachineAddress
+	data         []dubcc.MachineWord
+	addressWidth int
+}
+
+func NewHexViewer() *HexViewer {
+	return &HexViewer{
+		widget:       widget.List{List: layout.List{Axis: layout.Vertical}},
+		bytesPerRow:  24, // Máximo de bytes por linha
+		startAddress: 0,
+		addressWidth: 4,
+	}
+}
+
+func (hv *HexViewer) SetData(data []dubcc.MachineWord, startAddr dubcc.MachineAddress) {
+	hv.data = data
+	hv.startAddress = startAddr
+}
+
+func (hv *HexViewer) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
+	if len(hv.data) == 0 {
+		return layout.Dimensions{}
+	}
+
+	availableWidth := gtx.Constraints.Max.X - gtx.Dp(addressWidthDP)
+	bytesPerRow := availableWidth / gtx.Dp(hexCellWidthDP)
+
+	if bytesPerRow < 4 {
+		bytesPerRow = 4
+	}
+	if bytesPerRow > hv.bytesPerRow {
+		bytesPerRow = hv.bytesPerRow
+	}
+
+	numRows := (len(hv.data) + bytesPerRow - 1) / bytesPerRow
+
+	return material.List(th, &hv.widget).Layout(gtx, numRows, func(gtx layout.Context, rowIndex int) layout.Dimensions {
+		return hv.drawRow(gtx, th, rowIndex, bytesPerRow)
+	})
+}
+
+func (hv *HexViewer) drawRow(gtx layout.Context, th *material.Theme, rowIndex int, bytesPerRow int) layout.Dimensions {
+	startIdx := rowIndex * bytesPerRow
+	endIdx := startIdx + bytesPerRow
+	if endIdx > len(hv.data) {
+		endIdx = len(hv.data)
+	}
+
+	rowBg := zebraColor
+	if rowIndex%2 == 1 {
+		rowBg = white
+	}
+
+	defer clip.Rect{Max: gtx.Constraints.Max}.Push(gtx.Ops).Pop()
+	paint.ColorOp{Color: rowBg}.Add(gtx.Ops)
+	paint.PaintOp{}.Add(gtx.Ops)
+
+	return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			addr := hv.startAddress + dubcc.MachineAddress(startIdx)
+			addrText := fmt.Sprintf("%0*X:", hv.addressWidth, addr)
+			return hv.drawCell(gtx, th, addrText, font.Bold, color.NRGBA{R: 100, G: 100, B: 100, A: 255})
+		}),
+		layout.Rigid(layout.Spacer{Width: unit.Dp(12)}.Layout),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+
+			return hv.drawHexData(gtx, th, startIdx, endIdx)
+		}),
+	)
+}
+
+func (hv *HexViewer) drawHexData(gtx layout.Context, th *material.Theme, startIdx, endIdx int) layout.Dimensions {
+	var children []layout.FlexChild
+
+	for i := startIdx; i < endIdx; i++ {
+		word := hv.data[i]
+		hexText := fmt.Sprintf("%04X", word)
+
+		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return hv.drawCell(gtx, th, hexText, font.Normal, black)
+		}))
+	}
+	flex := layout.Flex{
+		Axis:    layout.Horizontal,
+		Spacing: layout.SpaceAround,
+	}
+	return flex.Layout(gtx, children...)
+}
+
+func (hv *HexViewer) drawCell(gtx layout.Context, th *material.Theme, text string, weight font.Weight, textColor color.NRGBA) layout.Dimensions {
+	inset := layout.Inset{
+		Top:    unit.Dp(6),
+		Right:  unit.Dp(6),
+		Bottom: unit.Dp(6),
+		Left:   unit.Dp(6),
+	}
+	return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		label := material.Body1(th, text)
+		label.Font.Weight = weight
+		label.Font.Typeface = customFont
+		label.TextSize = unit.Sp(18) // Retornado ao tamanho original
+		label.Color = textColor
+		label.MaxLines = 1
+		return label.Layout(gtx)
+	})
+}
+
+func HexViewerWithTitle(gtx layout.Context, th *material.Theme, title string, hexViewer *HexViewer) layout.Dimensions {
+	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return FillWithLabel(gtx, th, title, red, 16)
+		}),
+		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			return layout.Inset{
+				Left: unit.Dp(8),
+			}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+
+				return hexViewer.Layout(gtx, th)
+			})
+		}),
+	)
+}
+
+var hexViewer = NewHexViewer()
+
+func UpdateHexViewer() {
+	memorySlice := sim.Mem.Work[:min(64, len(sim.Mem.Work))]
+	hexViewer.SetData(memorySlice, 0)
+}
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
 	return b
 }
