@@ -58,6 +58,8 @@ type Sim struct {
 	Registers []MachineWord
 	Isa       ISA
 	State     SimState
+	SaveTemps	bool
+	TempDir   string
 }
 
 type SimState = byte

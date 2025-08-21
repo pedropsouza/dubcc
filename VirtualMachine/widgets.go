@@ -17,7 +17,8 @@ import (
 	"log"
 	"os"
 	"strings"
-	"github.com/k0kubun/pp/v3"
+	"math/rand"
+	"time"
 )
 
 func (mb *MenuBar) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
@@ -197,7 +198,7 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 					log.Printf("reset!")
 					sim.State = dubcc.SimStateRun
 					sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
-					startAddressMachineWord := dubcc.MachineWord(assemblerInfo.StartAddress)
+					startAddressMachineWord := dubcc.MachineWord(assemblerSingleton.StartAddress)
 					sim.SetRegister(dubcc.RegPC, startAddressMachineWord)
 					WipeMemory()
 				}
@@ -209,37 +210,48 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 
 func CompileCode() {
 	sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
-	assemblerInfo = assembler.MakeAssembler()
+	var assemblers = make([]assembler.Info, len(sources))
 
-	for _, line := range strings.Split(editor.state.Text(), "\n") {
-		assemblerInfo.FirstPassString(line)
+	for _, source := range sources {
+    asm := assembler.MakeAssembler()
+    for _, line := range strings.Split(source, "\n") {
+        asm.FirstPassString(line)
+    }
+    asm.SecondPass()
+    assemblers = append(assemblers, asm)
+
+		rand.Seed(time.Now().UnixNano())
+    n := rand.Int()
+
+		obj_filename := "test-" + string(n) + ".o"
+		obj, err := asm.GenerateObjectFile()
+		if err != nil {
+			log.Fatalf("error: could not compile: %v", err)
+		}
+		objects = append(objects, obj)
+		log.Printf("code compiled successfully: %d symbols, %d relocations",
+			len(obj.Symbols), len(obj.Relocations))
+		
+		if sim.SaveTemps {
+			if err := saveCompleteObjectFile(obj, obj_filename); err != nil {
+				log.Printf("warning: could not save %s: %v", obj_filename, err)
+			}
+		}
 	}
-	assemblerInfo.SecondPass()
-	pp.Print(assemblerInfo)
 
-	// TODO: do we call CompileCode() to each file or for a group of files ??
-	objFilename := "test.o"
-	obj, err := assemblerInfo.GenerateObjectFile()
-	if err != nil {
-		log.Fatalf("error: could not compile: %v", err)
+	// this is loading all the object files in the memory
+	var mem []dubcc.MachineWord
+	for _, obj := range objects {
+		mem = append(mem, obj.ToMachineWordSlice()...)
 	}
-	log.Printf("code compiled successfully: %d symbols, %d relocations",
-		len(obj.Symbols), len(obj.Relocations))
-
-	if err := saveCompleteObjectFile(obj, objFilename); err != nil {
-		log.Printf("warning: could not save %s: %v", objFilename, err)
-	}
-
-	// NOTE: i believe here the linker is called to build the memory image
-	mem := assemblerInfo.GetOutput()
 
 	if len(mem) > len(sim.Mem.Work) {
 		panic("program's too big")
 	}
 
-	startAddressMachineWord := dubcc.MachineWord(assemblerInfo.StartAddress)
+	startAddressMachineWord := dubcc.MachineWord(assemblers[0].StartAddress)
 	sim.SetRegister(dubcc.RegPC, startAddressMachineWord) // Altera o valor do PC pro valor indicado na diretiva "start"
-	startAddressInt := int(assemblerInfo.StartAddress)
+	startAddressInt := int(assemblers[0].StartAddress)
 
 	// NOTE: loader starts here
 	for idx, val := range mem {

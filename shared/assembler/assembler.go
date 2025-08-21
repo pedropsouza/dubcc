@@ -11,7 +11,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-
 	"github.com/k0kubun/pp/v3"
 )
 
@@ -482,6 +481,16 @@ func (obj *ObjectFile) Write(w io.Writer) error {
 	}
 	
 	return nil
+}
+
+func (obj *ObjectFile) ToMachineWordSlice() []dubcc.MachineWord {
+    var words []dubcc.MachineWord
+    for _, section := range obj.Sections {
+        if section.Header.Flags == 0x6 {
+            words = append(words, section.Data...)
+        }
+    }
+    return words
 }
 
 func Directives() map[string]DirectiveHandler {

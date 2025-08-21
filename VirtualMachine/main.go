@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"bytes"
 	"dubcc"
 	"dubcc/assembler"
@@ -18,9 +19,10 @@ import (
 	_ "image/png"
 	"log"
 	"os"
-	"github.com/k0kubun/pp/v3"
 )
 
+var sources []string
+var objects []*assembler.ObjectFile
 var window *app.Window
 var register *app.Window
 var editor EditorApp
@@ -36,7 +38,6 @@ var fe = NewFileExplorer()
 var memCap dubcc.MachineAddress
 var sim dubcc.Sim
 var assemblerSingleton assembler.Info
-var assemblerInfo assembler.Info
 
 //go:embed appicon.png
 var logoData []byte
@@ -53,7 +54,6 @@ func main() {
 	memCap = dubcc.MachineAddress(1 << 10)
 	sim = dubcc.MakeSim(memCap)
 	assemblerSingleton = assembler.MakeAssembler()
-	pp.Print(sim)
 	InitTables(&sim)
 	editor = EditorApp{}
 	th = material.NewTheme()
@@ -61,12 +61,47 @@ func main() {
 	gvcode.SetDebug(false)
 
 	if len(os.Args) > 1 {
-		code, err := os.ReadFile(os.Args[1])
-		if err == nil {
-			editor.state.SetText(string(code))
-		} else {
-			log.Printf("%v\n", err)
-		}
+		sourceAlreadyRead := false
+		for i := 1; i < len(os.Args); i++ {
+			arg := os.Args[i]
+			switch arg {
+				case "-l", "--lst":
+					fmt.Println("not implemented xd")
+				case "-c", "--source":
+					if i+1 >= len(os.Args) {
+						fmt.Println("error: -c/--source requires a value")
+						continue
+					}
+					code, err := os.ReadFile(os.Args[i+1])
+					if err != nil {
+							log.Printf("%v\n", err)
+					} else {
+						sources = append(sources, string(code))
+						editor.state.SetText(sources[0])
+						sourceAlreadyRead = true
+					}
+					i++
+				case "-s", "--save-temps":
+					if i+1 >= len(os.Args) {
+						fmt.Println("usage: -s/--save-temps <directory>")
+						continue
+					}
+					sim.SaveTemps = true
+					sim.TempDir = os.Args[i+1]
+					i++
+				default:
+					code, err := os.ReadFile(arg)
+					if err != nil {
+							log.Printf("%v\n", err)
+							continue
+					}
+					sources = append(sources, string(code))
+					if !sourceAlreadyRead {
+						editor.state.SetText(sources[0])
+						sourceAlreadyRead = true
+				}
+			}
+	  }
 	}
 
 	go func() {
