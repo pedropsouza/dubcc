@@ -10,8 +10,7 @@ import (
 	"log"
 	"os"
 	"strings"
-	"math/rand"
-	"time"
+	"path/filepath"
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -212,24 +211,20 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 func CompileCode() {
 	sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
 	macroProcessor := macroprocessor.MakeMacroProcessor()
-	var assemblers = make([]assembler.Info, len(sources))
+	assemblerSingleton = assembler.MakeAssembler()
+	var assemblers = make([]assembler.Info, len(files))
 
-	for _, source := range sources {
+	for i := range files {
     asm := assembler.MakeAssembler()
-    for _, line := range strings.Split(source, "\n") {
+    for _, line := range strings.Split(files[i].Data, "\n") {
         asm.FirstPassString(line)
     }
     asm.SecondPass()
     assemblers = append(assemblers, asm)
 
-		rand.Seed(time.Now().UnixNano())
-    n := rand.Int()
-
 		for line := range strings.SplitSeq(editor.state.Text(), "\n") {
 			macroProcessor.ProcessLine(line)
 		}
-
-		assemblerSingleton = assembler.MakeAssembler()
 
 		{
 			masmaprg, err := os.Create("MASMAPRG.ASM")
@@ -243,29 +238,33 @@ func CompileCode() {
 				assemblerSingleton.FirstPassString(line)
 			}
 		}
-
 		assemblerSingleton.SecondPass()
 
-		obj_filename := "test-" + string(n) + ".o"
 		obj, err := asm.GenerateObjectFile()
 		if err != nil {
 			log.Fatalf("error: could not compile: %v", err)
 		}
-		objects = append(objects, obj)
+		files[i].Object = obj
 		log.Printf("code compiled successfully: %d symbols, %d relocations",
 			len(obj.Symbols), len(obj.Relocations))
 		
 		if sim.SaveTemps {
-			if err := saveCompleteObjectFile(obj, obj_filename); err != nil {
-				log.Printf("warning: could not save %s: %v", obj_filename, err)
+			path := files[i].Name
+			base := filepath.Base(path)
+			if dot := strings.LastIndex(base, "."); dot != -1 {
+				base = base[:dot]
+			}
+			objFilename := base + ".o"
+			if err := saveCompleteObjectFile(obj, objFilename); err != nil {
+				log.Printf("warning: could not save %s: %v", objFilename, err)
 			}
 		}
 	}
 
 	// this is loading all the object files in the memory
 	var mem []dubcc.MachineWord
-	for _, obj := range objects {
-		mem = append(mem, obj.ToMachineWordSlice()...)
+	for _, file := range files {
+		mem = append(mem, file.Object.ToMachineWordSlice()...)
 	}
 
 	if len(mem) > len(sim.Mem.Work) {

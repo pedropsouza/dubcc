@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"bytes"
 	"dubcc"
 	"dubcc/assembler"
@@ -21,8 +20,13 @@ import (
 	"os"
 )
 
-var sources []string
-var objects []*assembler.ObjectFile
+type SourceFile struct {
+	Name 		string
+	Data		string
+	Object	*assembler.ObjectFile
+}
+
+var files	[]SourceFile
 var window *app.Window
 var register *app.Window
 var editor EditorApp
@@ -65,40 +69,25 @@ func main() {
 		for i := 1; i < len(os.Args); i++ {
 			arg := os.Args[i]
 			switch arg {
-				case "-l", "--lst":
-					fmt.Println("not implemented xd")
-				case "-c", "--source":
-					if i+1 >= len(os.Args) {
-						fmt.Println("error: -c/--source requires a value")
-						continue
-					}
-					code, err := os.ReadFile(os.Args[i+1])
-					if err != nil {
-							log.Printf("%v\n", err)
-					} else {
-						sources = append(sources, string(code))
-						editor.state.SetText(sources[0])
-						sourceAlreadyRead = true
-					}
-					i++
-				case "-s", "--save-temps":
-					if i+1 >= len(os.Args) {
-						fmt.Println("usage: -s/--save-temps <directory>")
-						continue
-					}
-					sim.SaveTemps = true
-					sim.TempDir = os.Args[i+1]
-					i++
-				default:
-					code, err := os.ReadFile(arg)
-					if err != nil {
-							log.Printf("%v\n", err)
-							continue
-					}
-					sources = append(sources, string(code))
-					if !sourceAlreadyRead {
-						editor.state.SetText(sources[0])
-						sourceAlreadyRead = true
+			case "-l", "--lst":
+				log.Fatal("not implemented xd")
+			case "-s", "--save-temps":
+				sim.SaveTemps = true
+			default:
+				code, err := os.ReadFile(arg)
+				if err != nil {
+					log.Printf("%v\n", err)
+					continue
+				}
+				file := SourceFile{
+					Name: string(arg),
+					Data: string(code),
+					Object: nil,
+				}
+				files = append(files, file)
+				if !sourceAlreadyRead {
+					editor.state.SetText(files[0].Data)
+					sourceAlreadyRead = true
 				}
 			}
 	  }
