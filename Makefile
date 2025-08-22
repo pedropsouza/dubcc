@@ -1,4 +1,4 @@
-build: assembler gui debug
+build: assembler linker vm debug
 
 assembler: ./assembler/*.go
 	go build -C ./assembler -v
@@ -9,6 +9,6 @@ vm: ./VirtualMachine/*.go
 debug: ./debug/*.go
 	go build -C ./debug -v 
 
-linker: ./assemler/linker/*.go
+linker: ./linker/*.go
 	go build -C ./linker -v 
 
