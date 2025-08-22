@@ -100,8 +100,8 @@ func (t *Terminal) layoutInput(gtx layout.Context) layout.Dimensions {
 			}
 		}
 	}
-	//rect := clip.Rect{Max: gtx.Constraints.Max}
-	//paint.FillShape(gtx.Ops, red, rect.Op())
+	rect := clip.Rect{Max: gtx.Constraints.Max}
+	paint.FillShape(gtx.Ops, black, rect.Op())
 
 	return layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(8), Left: unit.Dp(12), Right: unit.Dp(12)}.Layout(gtx,
 		func(gtx layout.Context) layout.Dimensions {
@@ -118,7 +118,7 @@ func (t *Terminal) layoutInput(gtx layout.Context) layout.Dimensions {
 				}),
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 					editorTerminal := material.Editor(t.theme, &t.editorTerminal, "")
-					editorTerminal.Color = white
+					editorTerminal.Color = yellow
 					return editorTerminal.Layout(gtx)
 				}),
 			)
@@ -126,11 +126,13 @@ func (t *Terminal) layoutInput(gtx layout.Context) layout.Dimensions {
 }
 
 func LayoutGeral(gtx layout.Context, terminal *Terminal) layout.Dimensions {
-	return layout.Stack{}.Layout(gtx,
-		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
+	return layout.Flex{
+		Axis: layout.Vertical,
+	}.Layout(gtx,
+		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			return terminal.layoutOutput(gtx)
 		}),
-		layout.Stacked(func(gtx layout.Context) layout.Dimensions {
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return terminal.layoutInput(gtx)
 		}),
 	)

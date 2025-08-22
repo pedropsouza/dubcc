@@ -116,32 +116,32 @@ func InstHandlers() map[string]InstHandler {
 			RegACC,
 			func(s *Sim, acc MachineWord, value MachineWord) MachineWord {
 				return acc + value
-			},
-		),
+
+			}),
 		"sub": registerMap1Handler(
 			RegACC,
 			func(s *Sim, acc MachineWord, value MachineWord) MachineWord {
 				return acc - value
-			},
-		),
+
+			}),
 		"divide": registerMap1Handler(
 			RegACC,
 			func(s *Sim, acc MachineWord, value MachineWord) MachineWord {
 				return acc / value
-			},
-		),
+
+			}),
 		"mult": registerMap1Handler(
 			RegACC,
 			func(s *Sim, acc MachineWord, value MachineWord) MachineWord {
 				return acc * value
-			},
-		),
+
+			}),
 		"br": registerMap1Handler(
 			RegPC,
 			func(s *Sim, pc MachineWord, value MachineWord) MachineWord {
 				return value
-			},
-		),
+
+			}),
 		"brpos": registerMap1Handler(
 			RegPC,
 			func(s *Sim, pc MachineWord, value MachineWord) MachineWord {
@@ -151,8 +151,7 @@ func InstHandlers() map[string]InstHandler {
 				} else {
 					return pc
 				}
-			},
-		),
+			}),
 		"brneg": registerMap1Handler(
 			RegPC,
 			func(s *Sim, pc MachineWord, value MachineWord) MachineWord {
@@ -161,8 +160,7 @@ func InstHandlers() map[string]InstHandler {
 				} else {
 					return pc
 				}
-			},
-		),
+			}),
 		"brzero": registerMap1Handler(
 			RegPC,
 			func(s *Sim, pc MachineWord, value MachineWord) MachineWord {
@@ -171,39 +169,33 @@ func InstHandlers() map[string]InstHandler {
 				} else {
 					return pc
 				}
-			},
-		),
+			}),
 		"load": registerMap1Handler(
 			RegACC,
 			func(s *Sim, acc MachineWord, value MachineWord) MachineWord {
 				return value
-			},
-		),
+
+			}),
 		"store": mutateState1Handler(func(s *Sim, value *MachineWord) {
 			*value = s.GetRegister(RegACC)
-		},
-		),
+		}),
 		"stop": mutateState1Handler(func(s *Sim, value *MachineWord) {
 			s.State = SimStateHalt
-		},
-		),
+		}),
 		"copy": mutateState2Handler(func(s *Sim, l, r *MachineWord) {
 			*l = *r
-		},
-		),
+		}),
 		"push": mutateState1Handler(func(s *Sim, value *MachineWord) {
 			s.Mem.Work[s.GetRegister(RegSP)] = *value
 			s.MapRegister(RegSP, func(valueSP MachineWord) MachineWord { return valueSP + 1 })
-		},
-		),
+		}),
 		"pop": mutateState1Handler(func(s *Sim, value *MachineWord) {
 			if !(s.GetRegister(RegSP) == (MachineWord(len(s.Mem.Work)) / 2)) {
 				s.MapRegister(RegSP, func(valueSP MachineWord) MachineWord { return valueSP - 1 })
 			}
 			*value = s.Mem.Work[s.GetRegister(RegSP)]
 			s.Mem.Work[s.GetRegister(RegSP)] = 0
-		},
-		),
+		}),
 		"call": mutateState1Handler(func(s *Sim, value *MachineWord) {
 			s.Mem.Work[s.GetRegister(RegSP)] = s.GetRegister(RegPC)
 			s.MapRegister(RegSP, func(valueSP MachineWord) MachineWord { return valueSP + 1 })
@@ -217,7 +209,14 @@ func InstHandlers() map[string]InstHandler {
 			s.SetRegister(RegPC, s.Mem.Work[s.GetRegister(RegSP)])
 			s.Mem.Work[s.GetRegister(RegSP)] = 0
 
-		},
-		),
+		}),
+		"read": mutateState1Handler(func(s *Sim, value *MachineWord) {
+			var char = s.dlvWord()
+			s.SetRegister(MachineAddress(*value), char)
+
+		}),
+		"write": mutateState1Handler(func(s *Sim, value *MachineWord) {
+
+		}),
 	}
 }

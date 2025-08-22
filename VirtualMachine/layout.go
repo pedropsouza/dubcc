@@ -84,8 +84,8 @@ func mainLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 			paint.ColorOp{Color: color.NRGBA{R: 0, G: 0, B: 0, A: 180}}.Add(gtx.Ops)
 			paint.PaintOp{}.Add(gtx.Ops)
 
-			cardW := int(float32(size.X) * 0.8)
-			cardH := int(float32(size.Y) * 0.8)
+			cardW := int(float32(size.X) * 0.9)
+			cardH := int(float32(size.Y) * 0.9)
 			offX := (size.X - cardW) / 2
 			offY := (size.Y - cardH) / 2
 			defer op.Offset(image.Pt(offX, offY)).Push(gtx.Ops).Pop()
