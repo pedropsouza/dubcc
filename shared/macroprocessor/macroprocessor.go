@@ -10,10 +10,17 @@ import (
 	"strings"
 )
 
+const (
+	GND = 0
+	META = 1
+	BODY = 2
+	// all subsequent states are clones of body
+)
+
 type Info struct {
 	macros       map[string]*Macro
-	macroLevel   int
-	macroStack   []MacroMeta
+	state        int
+	currentDef   *MacroMeta
 	output       []string
 	lineCounter dubcc.MachineAddress
 }
@@ -45,58 +52,57 @@ func BoolToInt(val bool) int {
 
 func (info *Info) ProcessLine(rawline string) (err error) {
 	line, err := dubcc.ParseAsmLine(rawline)
-	switch line.Op {
-	case "MACRO":
-		info.macroLevel++
-		return nil
-	case "MEND":
-		if info.macroLevel <= 0 {
-			return errors.New("End of macro before start.")
+	if err != nil { return err }
+	if line.Op == "MACRO" {
+		info.state++
+	}
+
+	if info.state != GND {
+		if line.Op == "MEND" {
+			info.state--
 		}
-		info.macroLevel--
-		meta := info.macroStack[len(info.macroStack)-1]
-		info.macroStack = info.macroStack[:len(info.macroStack)-1]
+
+		err := info.handleMacroDef(line)
+		return err
+	}
+
+	expansion, err := info.expandAndRunAllMacros(line)
+	if err != nil {
+		return err
+	}
+	info.output = append(info.output, expansion...)
+	return nil
+}
+
+func (info *Info) handleMacroDef(line dubcc.InLine) (err error) {
+	// skip MACRO line
+	if info.state == META { info.state++; return nil }
+	// first body line for this macro?
+	if info.currentDef == nil && info.state == BODY {
+    fields := strings.Fields(line.Raw)
+		if len(fields) == 0 {
+			return errors.New("bad macro syntax!")
+		}
+		info.currentDef = &MacroMeta{
+			name: fields[0],
+			args: fields[1:],
+			body: []string{},
+		}
+		return nil
+	}
+	
+	if line.Op == "MEND" && info.state == BODY {
+		meta := info.currentDef
 		info.macros[meta.name] = &Macro{
 			args: meta.args,
 			body: meta.body,
 			definedAt: dubcc.MachineAddress(info.lineCounter),
 		}
+		info.currentDef = nil
 		return nil
 	}
 
-	if info.macroLevel > 0 {
-		return info.handleMacroDef(line)
-	} else {
-	  expansion, err := info.expandAndRunAllMacros(line)
-		if err != nil {
-			return errors.New("Error expanding macro: " + err.Error())
-		}
-		info.output = append(info.output, expansion...)
-		return nil
-	}
-}
-
-func (info *Info) handleMacroDef(line dubcc.InLine) (err error) {
-	// first line for this macro?
-	if (info.macroLevel - len(info.macroStack)) > 0 {
-    fields := strings.Fields(line.Raw)
-		if len(fields) == 0 {
-			return errors.New("bad macro syntax!")
-		}
-		info.macroStack = append(info.macroStack, MacroMeta{
-			name: fields[0],
-			args: fields[1:],
-			body: []string{},
-		})
-		return nil
-	}
-	
-  expansion, err := info.expandAndRunAllMacros(line)
-	if err != nil {
-		return errors.New("Error expanding macro: " + err.Error())
-	}
-
-	info.macroStack[len(info.macroStack)-1].body = append(info.macroStack[len(info.macroStack)-1].body, expansion...)
+	info.currentDef.body = append(info.currentDef.body, line.Raw)
 
 	return nil
 }
@@ -160,8 +166,8 @@ func (info *Info) MacroReport() string {
 
 func MakeMacroProcessor() Info {
 	return Info{
-		macros:     make(map[string]*Macro),
-		macroLevel: 0,
+		macros: make(map[string]*Macro),
+		state: GND,
 		output: make([]string,0),
 	}
 }

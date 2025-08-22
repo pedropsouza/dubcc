@@ -161,14 +161,15 @@ func (info *Info) FirstPass(line dubcc.InLine) (reprs []Repr, err error) {
 	idata, ifound := info.isa.Instructions[line.Op]
 	if ifound { //Try instruction
 		reprs, err = info.handleInstruction(line, idata)
+		return reprs, err
 	} else {
 		directive, dfound := info.directives[line.Op]
 		if dfound { //Try the directive
 			directive.f(info, line)
+			return nil, nil
 		}
 	}
-
-	return reprs, err
+	return nil, errors.New("bad syntax")
 }
 
 func (info *Info) handleInstruction(line dubcc.InLine, idata dubcc.Instruction) ([]Repr, error) {

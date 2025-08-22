@@ -222,6 +222,7 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 }
 
 func CompileCode() {
+	sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
 	if len(files) < 1 {
 		files = append(files, SourceFile{Name: "editor", Data: ""})
 	}
