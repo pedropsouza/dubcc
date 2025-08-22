@@ -423,7 +423,7 @@ type HexViewer struct {
 func NewHexViewer() *HexViewer {
 	return &HexViewer{
 		widget:       widget.List{List: layout.List{Axis: layout.Vertical}},
-		bytesPerRow:  24, // Máximo de bytes por linha
+		bytesPerRow:  32, // Máximo de bytes por linha
 		startAddress: 0,
 		addressWidth: 4,
 	}
@@ -541,7 +541,7 @@ func HexViewerWithTitle(gtx layout.Context, th *material.Theme, title string, he
 var hexViewer = NewHexViewer()
 
 func UpdateHexViewer() {
-	memorySlice := sim.Mem.Work[:min(64, len(sim.Mem.Work))]
+	memorySlice := sim.Mem.Work[:min(int(memCap), len(sim.Mem.Work))]
 	hexViewer.SetData(memorySlice, 0)
 }
 func min(a, b int) int {
