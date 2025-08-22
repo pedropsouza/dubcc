@@ -25,6 +25,8 @@ import (
 	"github.com/k0kubun/pp/v3"
 )
 
+type Linker = linker.Linker
+
 func (mb *MenuBar) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 	bar := layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 		layout.Rigid(layout.Spacer{Width: unit.Dp(24)}.Layout),
@@ -228,12 +230,13 @@ func CompileCode() {
 	// we definetely should make this function smaller
 	sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
 	var assemblers = make([]assembler.Info, len(files))
+	var linkerSingleton *Linker
 
 	switch linkerMode {
 	case Relocator:
-		linkerSingleton := linker.MakeRelocatorLinker()
+		linkerSingleton = linker.MakeRelocatorLinker()
 	case Absolute:
-		linkerSingleton := linker.MakeAbsoluteLinker(0)
+		linkerSingleton = linker.MakeAbsoluteLinker(0)
 	}
 
 	for i := range files {

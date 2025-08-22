@@ -22,7 +22,7 @@ import (
 )
 
 type LinkerMode = linker.LinkerMode
-type ParseNum = assembler.ParseNum()
+type MachineAddress = dubcc.MachineAddress
 
 const (
 	Relocator = linker.Relocator
@@ -37,7 +37,7 @@ type SourceFile struct {
 
 var files	[]SourceFile
 var linkerMode LinkerMode
-var loadAddress LinkerMode
+var loadAddress MachineAddress
 var window *app.Window
 var editor EditorApp
 var th *material.Theme
@@ -87,7 +87,12 @@ func main() {
 					log.Fatal("usage: --absolute <load address>")
 				} else {
 					linkerMode = Absolute
-					loadAddress = ParseNum(os.Args[i+1])
+					var err error
+					loadAddress, err = assembler.ParseNum(os.Args[i+1])
+					if err != nil {
+						log.Fatal("error: " + err.Error())
+					}
+
 				} 
 			case "-s", "--save-temps":
 				sim.SaveTemps = true
