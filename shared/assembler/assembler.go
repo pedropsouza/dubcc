@@ -43,7 +43,7 @@ func (info *Info) GetOutput() []dubcc.MachineWord {
 }
 
 type DirectiveHandler struct {
-	f       func(info *Info, line dubcc.InLine)
+	f       func(info *Info, line dubcc.InLine) error
 	numArgs int
 }
 
@@ -248,18 +248,18 @@ func (info *Info) handleInstruction(line dubcc.InLine, idata dubcc.Instruction) 
 	return r, nil
 }
 
-func (info *Info) SecondPass() map[string]dubcc.MachineAddress {
+func (info *Info) SecondPass() (map[string]dubcc.MachineAddress, error) {
 	for _, link := range info.undefSyms.links {
 		sym, found := info.symbols[link.name]
 		if !found {
 			if !IsExternalSymbol(link.name) {
 				log.Printf("%s", fmt.Sprint(globalSymbols))
-				log.Fatalf("undefined symbol: %v (%v)", link.name, link)
+				return nil, fmt.Errorf("undefined symbol: %v (%v)", link.name, link)
 			}
 		}
 		info.output[link.from] = dubcc.MachineWord(sym)
 	}
-	return info.symbols
+	return info.symbols, nil
 }
 
 func ParseNum(in string) (num MachineAddress, err error) {
@@ -345,82 +345,90 @@ func MakeAssembler() Info {
 func Directives() map[string]DirectiveHandler {
 	return map[string]DirectiveHandler{
 		"space": {
-			f: func(info *Info, line dubcc.InLine) {
+			f: func(info *Info, line dubcc.InLine) error {
 				info.registerConst(line.Label, 0)
+				return nil
 			},
 			numArgs: 0,
 		},
 		"const": {
-			f: func(info *Info, line dubcc.InLine) {
+			f: func(info *Info, line dubcc.InLine) error {
 				num, err := ParseNum(line.Args[0])
 				if err != nil {
-					log.Printf("can't decide value for const %v: %v", line.Label, err)
+					err = fmt.Errorf("can't decide value for const %v: %v", line.Label, err)
+					return err
 				}
 				info.registerConst(line.Label, dubcc.MachineWord(num))
+				return nil
 			},
 			numArgs: 1,
 		},
 		"end": {
-			f: func(info *Info, line dubcc.InLine) {
+			f: func(info *Info, line dubcc.InLine) error {
 				info.moduleEnded = true
 				moduleEnded = true
 				log.Printf("module ended at address 0x%x", info.lineCounter)
+				return nil
 			},
 			numArgs: 0,
 		},
 		"extr": {
-			f: func(info *Info, line dubcc.InLine) {
+			f: func(info *Info, line dubcc.InLine) error {
 				symbolName := line.Args[0]
 				globalSymbols[symbolName] = true
 				log.Printf("declared global symbol: %s", symbolName)
 				if addr, exists := info.symbols[symbolName]; exists {
 					log.Printf("symbol %s already defined at 0x%x, marking as global", symbolName, addr)
 				}
+				return nil
 			},
 			numArgs: 1,
 		},
 		"extdef": {
-			f: func(info *Info, line dubcc.InLine) {
+			f: func(info *Info, line dubcc.InLine) error {
 				if line.Label == "" {
-					log.Fatalf("extdef requires a label, got %s", line.Label)
+					return fmt.Errorf("extdef requires a label, got %s", line.Label)
 				}
 				externSymbols[line.Label] = true
 				log.Printf("declared external symbol: %s", line.Label)
+				return nil
 			},
 			numArgs: 0,
 		},
 		"stack": {
-			f: func(info *Info, line dubcc.InLine) {
+			f: func(info *Info, line dubcc.InLine) error {
 				num, err := ParseNum(line.Args[0])
 				if err != nil {
-					log.Printf("can't parse stack size %v: %v", line.Args[0], err)
+					return fmt.Errorf("can't parse stack size %v: %v", line.Args[0], err)
 				}
 				stackSize := dubcc.MachineAddress(num)
 				maxStackSize = &stackSize
 				log.Printf("set maximum stack size to %d words", stackSize)
+				return nil
 			},
 			numArgs: 1,
 		},
 		"start": {
-			f: func(info *Info, line dubcc.InLine) {
+			f: func(info *Info, line dubcc.InLine) error {
 				if len(line.Args) != 1 {
 					log.Printf("start directive requires one argument (address), got %d", len(line.Args))
 				}
 				addrStr := line.Args[0]
 				addr, err := ParseNum(addrStr)
 				if err != nil {
-					log.Printf("invalid start address: %v", err)
+					return fmt.Errorf("invalid start address: %v", err)
 				}
 				info.StartAddress = dubcc.MachineAddress(addr)
+				return nil
 			},
 			numArgs: 1,
 		},
 		"MACRO": {
-			f:       func(info *Info, line dubcc.InLine) {},
+			f:       func(info *Info, line dubcc.InLine) error { return nil },
 			numArgs: 0,
 		},
 		"MEND": {
-			f:       func(info *Info, line dubcc.InLine) {},
+			f:       func(info *Info, line dubcc.InLine) error { return nil },
 			numArgs: 0,
 		},
 	}

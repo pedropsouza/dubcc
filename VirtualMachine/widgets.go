@@ -436,12 +436,19 @@ func CompileCode() {
 
 		println(macroProcessor.MacroReport())
 
-    asm.SecondPass()
+    _, err := asm.SecondPass()
+		if err != nil {
+			err = fmt.Errorf("error: could not compile: %v", err)
+			terminal.Write(err.Error())
+			return
+		}
     assemblers = append(assemblers, asm)
 
 		obj, err := asm.GenerateObjectFile()
 		if err != nil {
-			log.Fatalf("error: could not compile: %v", err)
+			err = fmt.Errorf("error: could not compile: %v", err)
+			terminal.Write(err.Error())
+			return
 		}
 		pp.Print(obj)
 
