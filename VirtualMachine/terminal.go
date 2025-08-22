@@ -136,7 +136,8 @@ func LayoutGeral(gtx layout.Context, terminal *Terminal) layout.Dimensions {
 	return layout.Flex{
 		Axis: layout.Vertical,
 	}.Layout(gtx,
-		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+		layout.Flexed(0.1, func(gtx layout.Context) layout.Dimensions { return FillWithLabel(gtx, th, "TERMINAL", red, 16) }),
+		layout.Flexed(0.9, func(gtx layout.Context) layout.Dimensions {
 			return terminal.layoutOutput(gtx)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
