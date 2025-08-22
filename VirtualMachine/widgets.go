@@ -3,15 +3,17 @@ package main
 import (
 	"dubcc"
 	"dubcc/assembler"
-	"dubcc/macroprocessor"
 	"dubcc/linker"
+	//"dubcc/macroprocessor"
 	"encoding/binary"
 	"image"
 	"image/color"
 	"log"
 	"os"
-	"strings"
 	"path/filepath"
+	"slices"
+	"strings"
+
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -213,11 +215,11 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 func CompileCode() {
 	// we definetely should make this function smaller
 	sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
-	macroProcessor := macroprocessor.MakeMacroProcessor()
+	//macroProcessor := macroprocessor.MakeMacroProcessor()
 	assemblerSingleton = assembler.MakeAssembler()
 	var assemblers = make([]assembler.Info, len(files))
-	//linkerSingleton := linker.MakeRelocatorLinker()
-	linkerSingleton := linker.MakeAbsoluteLinker(20)
+	linkerSingleton := linker.MakeRelocatorLinker()
+	//linkerSingleton := linker.MakeAbsoluteLinker(20)
 
 	for i := range files {
     asm := assembler.MakeAssembler()
@@ -227,11 +229,11 @@ func CompileCode() {
     asm.SecondPass()
     assemblers = append(assemblers, asm)
 
-		for line := range strings.SplitSeq(editor.state.Text(), "\n") {
-			macroProcessor.ProcessLine(line)
-		}
+		//for line := range strings.SplitSeq(editor.state.Text(), "\n") {
+		//	macroProcessor.ProcessLine(line)
+		//}
 
-		{
+		/*{
 			// I believe this should be generated after the linking etc
 			masmaprg, err := os.Create("MASMAPRG.ASM")
 			if err != nil {
@@ -243,8 +245,8 @@ func CompileCode() {
 				masmaprg.WriteString(line)
 				assemblerSingleton.FirstPassString(line)
 			}
-		}
-		assemblerSingleton.SecondPass()
+		}*/
+		//assemblerSingleton.SecondPass()
 
 		obj, err := asm.GenerateObjectFile()
 		if err != nil {
@@ -276,7 +278,7 @@ func CompileCode() {
 
 	executable, err := linkerSingleton.GenerateExecutable(objects)
 	if err != nil {
-		log.Print("error: sou um felino bosta\n")
+		log.Printf("error: sou um felino bosta\n%s\n", err.Error())
 	}
 
 	// this is concatenating all the object files in a single memory image
@@ -284,7 +286,20 @@ func CompileCode() {
 	//for _, file := range files {
 	//	mem = append(mem, file.Object.ToMachineWordSlice()...)
 	//}
-	var mem []dubcc.MachineWord = executable.ToMachineWordSlice()
+
+	mem := []dubcc.MachineWord{}
+
+	for _, section := range executable.Sections {
+		addr := section.Header.Address
+		tail := len(mem)
+		if tail < int(addr) {
+			mem = slices.Grow(mem, int(addr) - tail)
+		}
+		if int(addr) < tail {
+			panic("Section overlap")
+		}
+		mem = append(mem, section.Data...)
+	}
 
 	if len(mem) > len(sim.Mem.Work) {
 		panic("program's too big")

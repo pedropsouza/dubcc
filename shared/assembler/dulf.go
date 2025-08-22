@@ -45,6 +45,7 @@ type DulfHeader struct {
 	SymbolOffset  uint32 	// offset to symbol table
 	RelocOffset   uint32 	// offset to relocation table
 	StringOffset  uint32 	// offset to string table
+	StringTabSize uint32  // string table size in bytes
 }
 
 type SectionHeader struct {
@@ -72,7 +73,6 @@ type Relocation struct {
 	Offset     dubcc.MachineAddress // location to relocate
 	Info       uint32               // relocation type and symbol index
 	Addend     int64                // for relocation
-	SymbolName string
 }
 
 type ObjectFile struct {
@@ -154,6 +154,7 @@ func (info *Info) GenerateObjectFile() (*ObjectFile, error) {
 	obj.Header.SectionCount = uint16(len(obj.Sections))
 	obj.Header.SymbolCount = uint16(len(obj.Symbols))
 	obj.Header.RelocCount = uint16(len(obj.Relocations))
+	obj.Header.StringTabSize = uint32(len(obj.StringTable))
 	
 	return obj, nil
 }
@@ -209,7 +210,6 @@ func (obj *ObjectFile) buildRelocationTable(info *Info) {
 		reloc := Relocation{
 			Offset:     link.from,
 			Addend:     0,
-			SymbolName: link.name,
 		}
 
 		for i, sym := range obj.Symbols {
@@ -234,13 +234,13 @@ func (obj *ObjectFile) GetString(offset uint32) string {
 }
 
 func (obj *ObjectFile) Write(w io.Writer) error {
-	headerSize := uint32(40) // fixed header size??
-	sectionHeaderSize := uint32(len(obj.Sections) * 36) // 36 bytes per section header
+	headerSize := uint32(30) // fixed header size??
+	sectionHeaderSize := uint32(len(obj.Sections) * 34) // 34 bytes per section header
 	
 	obj.Header.SectionOffset = headerSize
 	obj.Header.SymbolOffset = obj.Header.SectionOffset + sectionHeaderSize
-	obj.Header.RelocOffset = obj.Header.SymbolOffset + uint32(len(obj.Symbols)*20) // 20 bytes per symbol
-	obj.Header.StringOffset = obj.Header.RelocOffset + uint32(len(obj.Relocations)*24) // 24 bytes per relocation
+	obj.Header.RelocOffset = obj.Header.SymbolOffset + uint32(len(obj.Symbols)*14) // 20 bytes per symbol
+	obj.Header.StringOffset = obj.Header.RelocOffset + uint32(len(obj.Relocations)*14) // 24 bytes per relocation
 	
 	// header
 	if err := binary.Write(w, binary.BigEndian, obj.Header); err != nil {
@@ -286,12 +286,58 @@ func (obj *ObjectFile) Write(w io.Writer) error {
 	return nil
 }
 
-func (obj *ObjectFile) ToMachineWordSlice() []dubcc.MachineWord {
-    var words []dubcc.MachineWord
-    for _, section := range obj.Sections {
-        if section.Header.Flags == 0x6 {
-            words = append(words, section.Data...)
-        }
-    }
-    return words
+func Read(r io.Reader) (obj *ObjectFile, err error) {
+	obj = &ObjectFile{}
+
+	// header
+	if err := binary.Read(r, binary.BigEndian, &obj.Header); err != nil {
+		return nil, err
+	}
+	obj.StringTable = make([]byte, obj.Header.StringTabSize)
+	// section headers
+	for range obj.Header.SectionCount {
+		section := Section{}
+		if err := binary.Read(r, binary.BigEndian, &section.Header); err != nil {
+			return nil, err
+		}
+		obj.Sections = append(obj.Sections, section)
+	}
+	// symbols
+	for range obj.Header.SymbolCount {
+		symbol := Symbol{}
+		if err := binary.Read(r, binary.BigEndian, &symbol); err != nil {
+			return nil, err
+		}
+		obj.Symbols = append(obj.Symbols, symbol)
+	}
+	// relocations
+	for range obj.Header.RelocCount {
+		reloc := Relocation{}
+		if err := binary.Read(r, binary.BigEndian, &reloc.Offset); err != nil {
+			return nil, err
+		}
+		if err := binary.Read(r, binary.BigEndian, &reloc.Info); err != nil {
+			return nil, err
+		}
+		if err := binary.Read(r, binary.BigEndian, &reloc.Addend); err != nil {
+			return nil, err
+		}
+		obj.Relocations = append(obj.Relocations, reloc)
+	}
+	// string table
+	if _, err := r.Read(obj.StringTable); err != nil {
+		return nil, err
+	}
+	// section data
+	for idx, section := range obj.Sections {
+		for range (section.Header.Size/2) {
+			var word dubcc.MachineWord
+			if err := binary.Read(r, binary.BigEndian, &word); err != nil {
+				return nil, err
+			}
+			obj.Sections[idx].Data = append(obj.Sections[idx].Data, word)
+		}
+	}
+
+	return obj, nil
 }

@@ -300,9 +300,11 @@ func (linker *Linker) applyRelocations() error {
 
 		for _, reloc := range obj.Relocations {
 			// find target symbol
-			linkedSymbol, exists := linker.SymbolMap[reloc.SymbolName]
+			symbi := reloc.GetSymbolIndex()
+			symbName := obj.GetString(obj.Symbols[symbi].NameOffset)
+			linkedSymbol, exists := linker.SymbolMap[symbName]
 			if !exists {
-				return fmt.Errorf("cannot resolve relocation for symbol '%s'", reloc.SymbolName)
+				return fmt.Errorf("cannot resolve relocation for symbol '%s'", symbName)
 			}
 
 			// calculate relocation position in merged data
