@@ -62,9 +62,6 @@ func (t *Terminal) Read() string {
 }
 
 func (t *Terminal) layoutOutput(gtx layout.Context) layout.Dimensions {
-	rect := clip.Rect{Max: gtx.Constraints.Max}
-	paint.FillShape(gtx.Ops, black, rect.Op())
-
 	return layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(8), Left: unit.Dp(12), Right: unit.Dp(12)}.Layout(gtx,
 		func(gtx layout.Context) layout.Dimensions {
 			t.mu.RLock()
@@ -110,8 +107,6 @@ func (t *Terminal) layoutInput(gtx layout.Context) layout.Dimensions {
 			}
 		}
 	}
-	rect := clip.Rect{Max: gtx.Constraints.Max}
-	paint.FillShape(gtx.Ops, black, rect.Op())
 
 	return layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(8), Left: unit.Dp(12), Right: unit.Dp(12)}.Layout(gtx,
 		func(gtx layout.Context) layout.Dimensions {
@@ -136,6 +131,8 @@ func (t *Terminal) layoutInput(gtx layout.Context) layout.Dimensions {
 }
 
 func LayoutGeral(gtx layout.Context, terminal *Terminal) layout.Dimensions {
+	rect := clip.Rect{Max: gtx.Constraints.Max}
+	paint.FillShape(gtx.Ops, black, rect.Op())
 	return layout.Flex{
 		Axis: layout.Vertical,
 	}.Layout(gtx,

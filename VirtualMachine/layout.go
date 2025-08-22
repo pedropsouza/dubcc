@@ -188,17 +188,17 @@ func rightLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 				colWeights := []float32{0.33, 0.33, 0.33}
 				return TextWithTable(gtx, th, "REGISTERS", red, &tableRegisters, colWeights)
 			}),
-//		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return logoWidget.Layout(gtx) }),
 		layout.Rigid(
 			layout.Spacer{Height: unit.Dp(32)}.Layout,
 		),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return actionButtonsLayout(gtx, th)
+		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			return layout.Inset{Right: unit.Dp(8)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return LayoutGeral(gtx, terminal)
+			})
 		}),
 		layout.Rigid(
-			layout.Spacer{Height: unit.Dp(32)}.Layout,
+			layout.Spacer{Height: unit.Dp(16)}.Layout,
 		),
 		//layout.Rigid(func(gtx layout.Context) layout.Dimensions { return logoWidget.Layout(gtx) }),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return LayoutGeral(gtx, terminal) }),
 	)
 }
