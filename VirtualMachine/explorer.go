@@ -14,15 +14,13 @@ import (
 	"gioui.org/widget/material"
 )
 
-// Use: fe := NewFileExplorer(). Depois chame fe.Layout(gtx, th).
-// Configure com fe.SetStartDir(path) e fe.SetFilter(".asm", ".txt") se quiser.
-// Quando o usuário clicar em um arquivo não diretório, chamaremos OnSelect(path).
 type FileExplorer struct {
 	current string
 	entries []fs.DirEntry
 
 	list        widget.List
 	entryClicks []widget.Clickable
+	closeBtn    widget.Clickable
 	upBtn       widget.Clickable
 	backBtn     widget.Clickable
 	refreshBtn  widget.Clickable
@@ -59,7 +57,6 @@ func (fe *FileExplorer) SetFilter(exts ...string) {
 }
 
 func (fe *FileExplorer) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
-	// Top bar: Back, Up, Refresh + breadcrumbs
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return fe.topBar(gtx, th)
@@ -81,6 +78,9 @@ func (fe *FileExplorer) topBar(gtx layout.Context, th *material.Theme) layout.Di
 		return b
 	}
 
+	if fe.closeBtn.Clicked(gtx) {
+		showExplorer = false
+	}
 	if fe.backBtn.Clicked(gtx) && len(fe.history) > 1 {
 		fe.history = fe.history[:len(fe.history)-1]
 		prev := fe.history[len(fe.history)-1]
@@ -101,12 +101,14 @@ func (fe *FileExplorer) topBar(gtx layout.Context, th *material.Theme) layout.Di
 		}
 	}
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return btnStyle("Close", &fe.closeBtn).Layout(gtx) }),
+		layout.Rigid(layout.Spacer{Width: unit.Dp(4)}.Layout),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return btnStyle("Back", &fe.backBtn).Layout(gtx) }),
-		layout.Rigid(layout.Spacer{Width: unit.Dp(6)}.Layout),
+		layout.Rigid(layout.Spacer{Width: unit.Dp(4)}.Layout),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return btnStyle("Up", &fe.upBtn).Layout(gtx) }),
-		layout.Rigid(layout.Spacer{Width: unit.Dp(6)}.Layout),
+		layout.Rigid(layout.Spacer{Width: unit.Dp(4)}.Layout),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return btnStyle("Refresh", &fe.refreshBtn).Layout(gtx) }),
-		layout.Rigid(layout.Spacer{Width: unit.Dp(12)}.Layout),
+		layout.Rigid(layout.Spacer{Width: unit.Dp(8)}.Layout),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {

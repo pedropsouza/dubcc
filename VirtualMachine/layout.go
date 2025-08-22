@@ -59,7 +59,6 @@ func mainLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 			if menuBar.backdrop.Clicked(gtx) {
 				menuBar.showFileMenu = false
 			}
-			// clickable invisível cobrindo a tela toda
 			return menuBar.backdrop.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Dimensions{Size: gtx.Constraints.Max}
 			})
@@ -85,8 +84,8 @@ func mainLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 			paint.ColorOp{Color: color.NRGBA{R: 0, G: 0, B: 0, A: 180}}.Add(gtx.Ops)
 			paint.PaintOp{}.Add(gtx.Ops)
 
-			cardW := int(float32(size.X) * 0.8)
-			cardH := int(float32(size.Y) * 0.8)
+			cardW := int(float32(size.X) * 0.9)
+			cardH := int(float32(size.Y) * 0.9)
 			offX := (size.X - cardW) / 2
 			offY := (size.Y - cardH) / 2
 			defer op.Offset(image.Pt(offX, offY)).Push(gtx.Ops).Pop()
@@ -116,18 +115,23 @@ func centerLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 		Axis: layout.Vertical,
 	}.Layout(gtx,
 		layout.Flexed(0.4, func(gtx layout.Context) layout.Dimensions {
-			colWeights := []float32{0.2, 0.15, 0.35, 0.3}
-			return layout.Inset{
-				Left: unit.Dp(8),
-			}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return TextWithTable(gtx, th, "MEMÓRIA", red, &tableMemory, colWeights)
-			})
+			if hexView {
+				UpdateHexViewer() // Update with current memory state
+				return HexViewerWithTitle(gtx, th, "MEMORY HEX VIEW", hexViewer)
+			} else {
+				colWeights := []float32{0.2, 0.15, 0.35, 0.3}
+				return layout.Inset{
+					Left: unit.Dp(8),
+				}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+					return TextWithTable(gtx, th, "MEMORY", red, &tableMemory, colWeights)
+				})
+			}
 		}),
 		layout.Rigid(
 			layout.Spacer{Height: unit.Dp(16)}.Layout,
 		),
 		layout.Flexed(0.4, func(gtx layout.Context) layout.Dimensions {
-			return textLayout(gtx, th, "CÓDIGO")
+			return textLayout(gtx, th, "CODE")
 		}),
 		layout.Rigid(
 			layout.Spacer{Height: unit.Dp(16)}.Layout,
@@ -148,8 +152,19 @@ func rightLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 		layout.Rigid(
 			func(gtx layout.Context) layout.Dimensions {
 				colWeights := []float32{0.33, 0.33, 0.33}
-				return TextWithTable(gtx, th, "REGISTRADORES", red, &tableRegisters, colWeights)
+				return TextWithTable(gtx, th, "REGISTERS", red, &tableRegisters, colWeights)
 			}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return logoWidget.Layout(gtx) }),
+//		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return logoWidget.Layout(gtx) }),
+		layout.Rigid(
+			layout.Spacer{Height: unit.Dp(32)}.Layout,
+		),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return actionButtonsLayout(gtx, th)
+		}),
+		layout.Rigid(
+			layout.Spacer{Height: unit.Dp(32)}.Layout,
+		),
+		//layout.Rigid(func(gtx layout.Context) layout.Dimensions { return logoWidget.Layout(gtx) }),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return LayoutGeral(gtx, terminal) }),
 	)
 }

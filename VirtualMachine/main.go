@@ -39,17 +39,15 @@ var files	[]SourceFile
 var linkerMode LinkerMode
 var loadAddress LinkerMode
 var window *app.Window
-var register *app.Window
 var editor EditorApp
 var th *material.Theme
 var assembleBtn, stepBtn, resetBtn widget.Clickable
-var fileBtn, editBtn, helpBtn widget.Clickable
-var openBtn, saveBtn, exitBtn widget.Clickable
 var menuBar MenuBar
+var hexView = false
+var terminal *Terminal
 
 var showExplorer bool
 var fe = NewFileExplorer()
-
 var memCap dubcc.MachineAddress
 var sim dubcc.Sim
 var assemblerSingleton assembler.Info
@@ -58,7 +56,7 @@ var assemblerSingleton assembler.Info
 var logoData []byte
 
 type MenuBar struct {
-	fileBtn, editBtn, helpBtn                widget.Clickable
+	fileBtn, hexBtn, helpBtn                 widget.Clickable
 	openBtn, saveBtn, exitBtn                widget.Clickable
 	showFileMenu, showEditMenu, showHelpMenu bool
 	menuWidth                                int
@@ -126,6 +124,7 @@ func main() {
 }
 
 func run(window *app.Window) error {
+	terminal = NewTerminal(th)
 	var ops op.Ops
 
 	customScheme := createCustomColorScheme(th)
