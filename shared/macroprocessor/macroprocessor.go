@@ -2,33 +2,39 @@ package macroprocessor
 
 import (
 	"dubcc"
+	_ "dubcc/assembler"
 	"errors"
+	"fmt"
 	"log"
-	"slices"
+
+	//"slices"
 	"strings"
 )
 
+const (
+	GND = 0
+	META = 1
+	BODY = 2
+	// all subsequent states are clones of body
+)
+
 type Info struct {
-	macros       map[string]Macros
-	macroLevel   int
-	macroStack   []MacroFrame
-	output       []string
-	lineCounter dubcc.MachineAddress
+	macros       map[string]*Macro
+	state        int
+	currentDef   *MacroMeta
+	lineCount    int
 }
 
-func (info *Info) GetOutput() []string {
-	return info.output
-}
-
-type Macros struct {
+type Macro struct {
 	args      []string
 	body      []string
+	uses      int
 	definedAt dubcc.MachineAddress //Totalmente opcional, uso futuro para mensagens de erro
 }
 
-type MacroFrame struct {
+type MacroMeta struct {
 	name string
-	args []string
+  args []string
 	body []string
 }
 
@@ -40,65 +46,98 @@ func BoolToInt(val bool) int {
 	}
 }
 
-var EmptyLineErr = errors.New("empty line")
-
-func (info *Info) ProcessLine(rawline string) (err error) {
+func (info *Info) ProcessLine(rawline string) (output []string, err error) {
 	line, err := dubcc.ParseAsmLine(rawline)
+	if err != nil { return nil, err }
 	if line.Op == "MACRO" {
-		info.macroLevel++
-		return nil
-	}
-	if info.macroLevel > 0 {
-		return info.handleMacroDef(line)
+		info.state++
 	}
 
-	expansion := line.Raw
-	macro, mfound := info.macros[line.Op]
-	if mfound { //This shit has to be a macro, right?
-		expansion, err = info.expandAndRunMacro(macro, line)
-		if err != nil { return err }
-	}
-	if line.Op == "MEND" { //De preferência, deixar como último teste
-		return errors.New("End of macro before start.")
+	if info.state != GND {
+		log.Printf("line \"%s\" with macro level %d", rawline, info.state)
+		err := info.handleMacroDef(line)
+		if line.Op == "MEND" {
+			info.state--
+			if info.state == META {
+				info.state--
+			}
+		}
+		return nil,err
 	}
 
-	info.output = append(info.output, expansion)
-	return nil
+	log.Printf("line \"%s\" with macro level %d", rawline, info.state)
+	expansion, err := info.expandAndRunAllMacros(line)
+	if err != nil {
+		return nil,err
+	}
+	output = append(output, expansion...)
+	return output, nil
 }
 
 func (info *Info) handleMacroDef(line dubcc.InLine) (err error) {
-	if len(info.macroStack) < info.macroLevel { //Se for a primeira linha...
-		for len(info.macroStack) < info.macroLevel {
-			info.macroStack = append(info.macroStack, MacroFrame{})
+	// skip MACRO line
+	if info.state == META { info.state++; return nil }
+	// first body line for this macro?
+	if info.currentDef == nil && info.state == BODY {
+    fields := strings.Fields(line.Raw)
+		if len(fields) == 0 {
+			return errors.New("bad macro syntax!")
 		}
-		info.macroStack[info.macroLevel-1] = MacroFrame{
-			name: line.Op,
-			args: line.Args,
+		info.currentDef = &MacroMeta{
+			name: fields[0],
+			args: fields[1:],
 			body: []string{},
 		}
 		return nil
 	}
-
-	if line.Op == "MEND" { //Aqui, toda macro foi lida e o MEND vai fechar a macro
-		info.macroLevel--
-		frame := info.macroStack[info.macroLevel]
-		macro := Macros{
-			args:      frame.args,
-			body:      frame.body,
-			definedAt: info.lineCounter,
+	
+	if line.Op == "MEND" && info.state == BODY {
+		meta := info.currentDef
+		info.macros[meta.name] = &Macro{
+			args: meta.args,
+			body: meta.body,
+			definedAt: dubcc.MachineAddress(info.lineCount),
 		}
-
-		info.macroStack = slices.Delete(info.macroStack, info.macroLevel, info.macroLevel+1)
-		info.macros[frame.name] = macro
+		info.currentDef = nil
 		return nil
 	}
-	frame := &info.macroStack[info.macroLevel-1]
-	frame.body = append(frame.body, line.Raw)
+
+	if info.currentDef != nil {
+		info.currentDef.body = append(info.currentDef.body, line.Raw)
+	}
+
 	return nil
 }
 
-func (info *Info) expandAndRunMacro(macro Macros, line dubcc.InLine) (string, error) {
-	macro_err_str := "macro error!"
+func (info *Info) expandAndRunAllMacros(line dubcc.InLine) (out []string, err error) {
+	lines := []dubcc.InLine{line}
+	for len(lines) > 0 {
+		line := lines[0]
+		lines = lines[1:]
+		macro, mfound := info.macros[line.Op]
+		if mfound {
+			expansion, err := info.expandAndRunMacro(*macro, line)
+			if err != nil { return nil, err }
+			for _, expanded_line := range expansion {
+				innerLines, err := info.ProcessLine(expanded_line)
+				if err != nil { return nil, err }
+				reparse := []dubcc.InLine{}
+				for _, line := range innerLines {
+					reparsedLine, err := dubcc.ParseAsmLine(line)
+					if err != nil { return nil, err }
+					reparse = append(reparse, reparsedLine)
+				}
+				lines = append(lines, reparse...)
+			}
+		} else {
+			out = append(out, line.Raw)
+		}
+	}
+	return out, err
+}
+
+func (info *Info) expandAndRunMacro(macro Macro, line dubcc.InLine) ([]string, error) {
+	macro_err_str := []string{"macro error!"}
 	if len(line.Args) != len(macro.args) {
 		return macro_err_str, errors.New("number of arguments doesn't match")
 	}
@@ -108,7 +147,10 @@ func (info *Info) expandAndRunMacro(macro Macros, line dubcc.InLine) (string, er
 		substitutions[formal] = line.Args[i]
 	}
 
-	var macro_expansion = ""
+	var macro_expansion = []string{}
+	if line.Label != "" {
+		macro_expansion = append(macro_expansion, line.Label + ":")
+	}
 	for _, raw := range macro.body {
 		words := strings.Split(raw, " ")
 		for i, word := range words {
@@ -119,18 +161,21 @@ func (info *Info) expandAndRunMacro(macro Macros, line dubcc.InLine) (string, er
 		}
 		expanded := strings.Join(words, " ")
 
-		macro_expansion = macro_expansion + expanded
+		macro_expansion = append(macro_expansion, expanded)
 	}
 	log.Print(macro_expansion)
 	return macro_expansion, nil
 }
 
-func MakeMacroProcessor() Info {
+func (info *Info) MacroReport() string {
+	return fmt.Sprintf("Macro report:\n\t%d macros", len(info.macros))
+}
+
+func MakeMacroProcessor(lineNum int) Info {
 	return Info{
-		macros:     make(map[string]Macros),
-		macroLevel: 0,
-		macroStack: make([]MacroFrame,0),
-		output: make([]string,0),
+		macros: make(map[string]*Macro),
+		state: GND,
+		lineCount: lineNum,
 	}
 }
 

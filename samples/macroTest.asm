@@ -1,5 +1,5 @@
 MACRO
-NOME E F
+NAME E F
 add E
 sub F
 brpos POS

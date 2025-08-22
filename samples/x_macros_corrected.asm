@@ -11,8 +11,6 @@ DATA_LIST
   X 888888 6
 MEND
 
-br start
-
 MACRO
   KEYS
   MACRO
@@ -31,6 +29,8 @@ MACRO
   DATA_LIST
 MEND
 
+br begin
+
 list_keys: KEYS
 list_values: VALUES
 
@@ -43,7 +43,7 @@ MACRO
   DATA_LIST
 MEND
 
-start: XCOUNT
+begin: XCOUNT
   sub list_values
   add list_keys
 stop

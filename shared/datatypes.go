@@ -40,13 +40,12 @@ func ParseAsmLine(rawLine string) (line InLine, err error) {
 	// ignore comments
 	code, _, _ = strings.Cut(code, ";")
 	fields := strings.Fields(code)
-	if len(fields) < 1 {
-		return InLine{}, EmptyLineErr
-	}
+	op := ""
+	if len(fields) > 0 { op = fields[0] }
 	return InLine{
 		Raw:   rawLine,
 		Label: label,
-		Op:    fields[0],
+		Op:    op,
 		Args:  fields[min(len(fields), 1):],
 	}, nil
 }

@@ -1,9 +1,11 @@
-MACRO ASSOCIATED U
+MACRO
+  ASSOCIATED U
   space
   const U
 MEND
 
-MACRO OUTER
+MACRO
+OUTER
   MACRO
     INNER A B C
     const A

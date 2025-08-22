@@ -147,23 +147,31 @@ func (info *Info) FirstPassString(rawLine string) (reprs []Repr, err error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if parsedLine.Label != "" {
+		info.registerLabel(parsedLine.Label)
+	}
+	if parsedLine.Op == "" {
+		if parsedLine.Label == "" {
+		  return nil, dubcc.EmptyLineErr
+	  }
+	}
 	return info.FirstPass(parsedLine)
 }
 
-func (info *Info) FirstPass(line dubcc.InLine) ([]Repr, error) {
+func (info *Info) FirstPass(line dubcc.InLine) (reprs []Repr, err error) {
 	idata, ifound := info.isa.Instructions[line.Op]
 	if ifound { //Try instruction
-		return info.handleInstruction(line, idata)
+		reprs, err = info.handleInstruction(line, idata)
+		return reprs, err
+	} else {
+		directive, dfound := info.directives[line.Op]
+		if dfound { //Try the directive
+			directive.f(info, line)
+			return nil, nil
+		}
 	}
-
-	directive, dfound := info.directives[line.Op]
-	if dfound { //Try the directive
-		directive.f(info, line)
-		return nil, nil
-	}
-
-	log.Printf("Warning: Invalid operation: %v", line.Op)
-	return nil, nil
+	return nil, errors.New("bad syntax")
 }
 
 func (info *Info) handleInstruction(line dubcc.InLine, idata dubcc.Instruction) ([]Repr, error) {
@@ -231,10 +239,6 @@ func (info *Info) handleInstruction(line dubcc.InLine, idata dubcc.Instruction) 
 		// signify indirect mode and implement it
 	}
 
-	if line.Label != "" {
-		info.registerLabel(line.Label)
-	}
-
 	for _, repr := range r {
 		pp.Fprintf(os.Stderr, "adding %v @ %v\n", repr.out, len(info.output))
 		info.output = append(info.output, repr.out)
@@ -291,6 +295,7 @@ func (info *Info) registerLabelAt(name string, where dubcc.MachineAddress) {
 
 func (info *Info) registerLabel(name string) {
 	info.registerLabelAt(name, info.lineCounter)
+	log.Printf("Registered label \"%s\" @ %d\n", name, info.lineCounter)
 }
 
 func (info *Info) GetSymbols() []string {
@@ -350,7 +355,7 @@ func Directives() map[string]DirectiveHandler {
 			f: func(info *Info, line dubcc.InLine) {
 				num, err := ParseNum(line.Args[0])
 				if err != nil {
-					log.Fatalf("can't decide value for const %v: %v", line.Label, err)
+					log.Printf("can't decide value for const %v: %v", line.Label, err)
 				}
 				info.registerConst(line.Label, dubcc.MachineWord(num))
 			},
@@ -389,7 +394,7 @@ func Directives() map[string]DirectiveHandler {
 			f: func(info *Info, line dubcc.InLine) {
 				num, err := ParseNum(line.Args[0])
 				if err != nil {
-					log.Fatalf("can't parse stack size %v: %v", line.Args[0], err)
+					log.Printf("can't parse stack size %v: %v", line.Args[0], err)
 				}
 				stackSize := dubcc.MachineAddress(num)
 				maxStackSize = &stackSize
@@ -400,12 +405,12 @@ func Directives() map[string]DirectiveHandler {
 		"start": {
 			f: func(info *Info, line dubcc.InLine) {
 				if len(line.Args) != 1 {
-					log.Fatalf("start directive requires one argument (address), got %d", len(line.Args))
+					log.Printf("start directive requires one argument (address), got %d", len(line.Args))
 				}
 				addrStr := line.Args[0]
 				addr, err := ParseNum(addrStr)
 				if err != nil {
-					log.Fatalf("invalid start address: %v", err)
+					log.Printf("invalid start address: %v", err)
 				}
 				info.StartAddress = dubcc.MachineAddress(addr)
 			},
