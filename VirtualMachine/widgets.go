@@ -223,7 +223,7 @@ func CompileCode() {
 
 	for i := range files {
     asm := assembler.MakeAssembler()
-    for _, line := range strings.Split(files[i].Data, "\n") {
+    for _, line := range strings.SplitSeq(files[i].Data, "\n") {
         asm.FirstPassString(line)
     }
     asm.SecondPass()

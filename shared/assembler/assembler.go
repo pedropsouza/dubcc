@@ -30,7 +30,7 @@ type Info struct {
 	macroLevel       int
 	macroStack       []MacroFrame
 	output           []dubcc.MachineWord
-	line_counter     dubcc.MachineAddress
+	lineCounter     dubcc.MachineAddress
 	StartAddress     dubcc.MachineAddress
 	stackSize		     dubcc.MachineAddress
 	moduleEnded      bool
@@ -132,7 +132,6 @@ const (
 	ReprComplete
 )
 
-// Estrutura usada na primeira passagem
 type Repr struct {
 	tag    ReprKind          //Estado da representação
 	input  string            //Texto de entrada
@@ -239,7 +238,7 @@ func (info *Info) handleInstruction(line dubcc.InLine, idata dubcc.Instruction) 
 		info.output = append(info.output, repr.out)
 	}
 	
-	info.line_counter = dubcc.MachineAddress(len(info.output))
+	info.lineCounter = dubcc.MachineAddress(len(info.output))
 
 	return r, nil
 }
@@ -289,7 +288,7 @@ func (info *Info) registerLabelAt(name string, where dubcc.MachineAddress) {
 }
 
 func (info *Info) registerLabel(name string) {
-	info.registerLabelAt(name, info.line_counter)
+	info.registerLabelAt(name, info.lineCounter)
 }
 
 func (info *Info) GetSymbols() []string {
@@ -306,10 +305,10 @@ func (info *Info) SymbolOccurances() map[string][]dubcc.MachineAddress {
 
 func (info *Info) registerConst(name string, val dubcc.MachineWord) {
 	if name != "" {
-		info.symbols[name] = info.line_counter
+		info.symbols[name] = info.lineCounter
 	}
 	info.output = append(info.output, val)
-	info.line_counter += 1
+	info.lineCounter += 1
 }
 
 type ObjectInfo struct {
@@ -359,7 +358,7 @@ func Directives() map[string]DirectiveHandler {
 			f: func(info *Info, line dubcc.InLine) {
 				info.moduleEnded = true
 				moduleEnded = true
-				log.Printf("module ended at address 0x%x", info.line_counter)
+				log.Printf("module ended at address 0x%x", info.lineCounter)
 			},
 			numArgs: 0,
 		},
@@ -377,7 +376,7 @@ func Directives() map[string]DirectiveHandler {
 		"extdef": {
 			f: func(info *Info, line dubcc.InLine) {
 				if line.Label == "" {
-					log.Fatalf("extdef requires a label, got %s", line.Label) // TODO: got what??
+					log.Fatalf("extdef requires a label, got %s", line.Label)
 				}
 				externSymbols[line.Label] = true
 				log.Printf("declared external symbol: %s", line.Label)

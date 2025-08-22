@@ -13,7 +13,7 @@ type Info struct {
 	macroLevel   int
 	macroStack   []MacroFrame
 	output       []string
-	line_counter dubcc.MachineAddress
+	lineCounter dubcc.MachineAddress
 }
 
 func (info *Info) GetOutput() []string {
@@ -85,7 +85,7 @@ func (info *Info) handleMacroDef(line dubcc.InLine) (err error) {
 		macro := Macros{
 			args:      frame.args,
 			body:      frame.body,
-			definedAt: info.line_counter,
+			definedAt: info.lineCounter,
 		}
 
 		info.macroStack = slices.Delete(info.macroStack, info.macroLevel, info.macroLevel+1)

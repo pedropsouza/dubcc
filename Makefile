@@ -1,10 +1,14 @@
-build: build_assembler build_gui build_debug
+build: assembler gui debug
 
-build_assembler: ./assembler/*.go
+assembler: ./assembler/*.go
 	go build -C ./assembler -v
 
-build_gui: ./VirtualMachine/*.go
+vm: ./VirtualMachine/*.go
 	go build -C ./VirtualMachine -v
 
-build_debug: ./debug/*.go
+debug: ./debug/*.go
 	go build -C ./debug -v 
+
+linker: ./assemler/linker/*.go
+	go build -C ./linker -v 
+
