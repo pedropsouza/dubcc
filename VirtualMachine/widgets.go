@@ -6,7 +6,6 @@ import (
 	"dubcc/linker"
 	"dubcc/macroprocessor"
 	"fmt"
-	"encoding/binary"
 	"image"
 	"image/color"
 	"log"
@@ -26,6 +25,7 @@ import (
 )
 
 type Linker = linker.Linker
+type ObjectFile = assembler.ObjectFile
 
 func (mb *MenuBar) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 	bar := layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
@@ -231,6 +231,9 @@ func CompileCode() {
 	sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
 	var assemblers = make([]assembler.Info, len(files))
 	var linkerSingleton *Linker
+	var objects []*assembler.ObjectFile
+
+	if executableProvided { goto populateMemory }
 
 	switch linkerMode {
 	case Relocator:
@@ -280,27 +283,28 @@ func CompileCode() {
 				base = base[:dot]
 			}
 			objFilename := base + ".o"
-			if err := saveCompleteObjectFile(obj, objFilename); err != nil {
+			if err := assembler.SaveCompleteObjectFile(obj, objFilename); err != nil {
 				log.Printf("warning: could not save %s: %v", objFilename, err)
 			}
 		}
 	}
 
-	var objects []*assembler.ObjectFile
 	for i := range files {
 		objects = append(objects, files[i].Object)
 	}
 
-	executable, err := linkerSingleton.GenerateExecutable(objects)
-	if err != nil {
-		log.Printf("error: could not generate an executable\n%s\n", err.Error())
-	}
+populateMemory:
+	var executable *ObjectFile
 
-	// this is concatenating all the object files in a single memory image
-	//var mem []dubcc.MachineWord
-	//for _, file := range files {
-	//	mem = append(mem, file.Object.ToMachineWordSlice()...)
-	//}
+	if  executableProvided {
+		executable = files[0].Object
+	} else {
+		var err error
+		executable, err = linkerSingleton.GenerateExecutable(objects)
+		if err != nil {
+			log.Printf("error: could not generate an executable\n%s\n", err.Error())
+		}
+	}
 
 	mem := []dubcc.MachineWord{}
 
@@ -375,29 +379,6 @@ func WipeMemory() {
 	for i := range memCap {
 		sim.Mem.Work[i] = 0
 	}
-}
-
-func machineWordsToBytes(words []dubcc.MachineWord) []byte {
-	buf := make([]byte, len(words)*2)
-	for i, word := range words {
-		binary.LittleEndian.PutUint16(buf[i*2:], uint16(word))
-	}
-	return buf
-}
-
-func saveCompleteObjectFile(obj *assembler.ObjectFile, filename string) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	return obj.Write(file)
-}
-
-// in case we need just the raw assembler output
-func saveObjectFile(data []dubcc.MachineWord, filename string) error {
-	return os.WriteFile(filename, machineWordsToBytes(data), 0644)
 }
 
 func FlatButton(th *material.Theme, btn *widget.Clickable, label string) material.ButtonStyle {

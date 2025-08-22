@@ -23,21 +23,17 @@ import (
 
 type LinkerMode = linker.LinkerMode
 type MachineAddress = dubcc.MachineAddress
+type SourceFile = assembler.SourceFile
 
 const (
 	Relocator = linker.Relocator
 	Absolute = linker.Absolute
 )
 
-type SourceFile struct {
-	Name 		string
-	Data		string
-	Object	*assembler.ObjectFile
-}
-
 var files	[]SourceFile
 var linkerMode LinkerMode
 var loadAddress MachineAddress
+var executableProvided bool = false
 var window *app.Window
 var editor EditorApp
 var th *material.Theme
@@ -80,10 +76,33 @@ func main() {
 		for i := 1; i < len(os.Args); i++ {
 			arg := os.Args[i]
 			switch arg {
+			case "-e", "--executable":
+				if len(os.Args) != i+1 {
+					obj, err := os.ReadFile(os.Args[i+1])
+					if err != nil {
+						log.Printf("%v\n", err)
+						continue
+					}
+					r := bytes.NewReader(obj)
+					executable, err := assembler.Read(r)
+					if err != nil {
+						panic(err.Error())
+					}
+					file := SourceFile{
+						Name: string(obj),
+						Data: "",
+						Object: executable,
+					}
+					files = append(files, file)
+					executableProvided = true
+					continue
+				} else {
+					log.Fatal("error: --executable needs <executabe path>")
+				}
 			case "-l", "--lst":
 				log.Fatal("not implemented xd")
 			case "-a", "--absolute":
-				if len(os.Args) == i+1 {
+				if len(os.Args) != i+1 {
 					log.Fatal("usage: --absolute <load address>")
 				} else {
 					linkerMode = Absolute
@@ -92,7 +111,7 @@ func main() {
 					if err != nil {
 						log.Fatal("error: " + err.Error())
 					}
-
+					continue
 				} 
 			case "-s", "--save-temps":
 				sim.SaveTemps = true

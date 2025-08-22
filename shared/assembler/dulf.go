@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"io"
 	"fmt"
+	"os"
 	"github.com/k0kubun/pp/v3"
 )
 
@@ -75,6 +76,12 @@ type Relocation struct {
 	Offset     dubcc.MachineAddress // location to relocate
 	Info       uint32               // relocation type and symbol index
 	Addend     int64                // for relocation
+}
+
+type SourceFile struct {
+	Name 		string
+	Data		string
+	Object	*ObjectFile
 }
 
 type ObjectFile struct {
@@ -235,6 +242,29 @@ func (obj *ObjectFile) GetString(offset uint32) string {
 		end++
 	}
 	return string(obj.StringTable[offset:end])
+}
+
+func SaveCompleteObjectFile(obj *ObjectFile, filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return obj.Write(file)
+}
+
+// in case we need just the raw assembler output
+func saveObjectFile(data []dubcc.MachineWord, filename string) error {
+	return os.WriteFile(filename, machineWordsToBytes(data), 0644)
+}
+
+func machineWordsToBytes(words []dubcc.MachineWord) []byte {
+	buf := make([]byte, len(words)*2)
+	for i, word := range words {
+		binary.LittleEndian.PutUint16(buf[i*2:], uint16(word))
+	}
+	return buf
 }
 
 func (obj *ObjectFile) Write(w io.Writer) error {

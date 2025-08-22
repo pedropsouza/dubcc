@@ -5,6 +5,7 @@ assembler/assembler
 assembler/assembler-bin
 simulator/simulator
 debug/debug
+linker/linker-bin
 VirtualMachine/VirtualMachine
 VirtualMachine/*.o
 VirtualMachine/MASMAPRG*

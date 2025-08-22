@@ -13,6 +13,8 @@ import (
 	"github.com/k0kubun/pp/v3"
 )
 
+type MachineAddress = dubcc.MachineAddress
+
 var (
 	globalSymbols = make(map[string]bool)
 	externSymbols = make(map[string]bool)
@@ -30,7 +32,7 @@ type Info struct {
 	macroLevel       int
 	macroStack       []MacroFrame
 	output           []dubcc.MachineWord
-	lineCounter     dubcc.MachineAddress
+	lineCounter      dubcc.MachineAddress
 	StartAddress     dubcc.MachineAddress
 	stackSize		     dubcc.MachineAddress
 	moduleEnded      bool
@@ -257,7 +259,7 @@ func (info *Info) SecondPass() map[string]dubcc.MachineAddress {
 	return info.symbols
 }
 
-func ParseNum(in string) (num uint64, err error) {
+func ParseNum(in string) (num MachineAddress, err error) {
 	b2 := regexp.MustCompile("^0b([0-1]+)$")
 	b8 := regexp.MustCompile("^0o([0-7]+)$")
 	b10 := regexp.MustCompile("^([0-9]+)$")
