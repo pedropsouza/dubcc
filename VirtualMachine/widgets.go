@@ -6,13 +6,6 @@ import (
 	"dubcc/linker"
 	"dubcc/macroprocessor"
 	"fmt"
-	"image"
-	"image/color"
-	"log"
-	"os"
-	"path/filepath"
-	"slices"
-	"strings"
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -22,6 +15,13 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/k0kubun/pp/v3"
+	"image"
+	"image/color"
+	"log"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
 )
 
 type Linker = linker.Linker
@@ -60,7 +60,7 @@ func (mb *MenuBar) Layout(gtx layout.Context, th *material.Theme) layout.Dimensi
 			if mb.helpBtn.Clicked(gtx) {
 				mb.showHelpMenu = !mb.showHelpMenu
 			}
-			btn := material.Button(th, &mb.helpBtn, "Help")
+			btn := FlatButton(th, &mb.helpBtn, "Help")
 			btn.Background = yellow
 			btn.Color = black
 			btn.Font.Typeface = customFont
@@ -394,7 +394,9 @@ func CompileCode() {
 	var linkerSingleton *Linker
 	var objects []*assembler.ObjectFile
 
-	if executableProvided { goto populateMemory }
+	if executableProvided {
+		goto populateMemory
+	}
 
 	switch linkerMode {
 	case Relocator:
@@ -406,15 +408,15 @@ func CompileCode() {
 	for i := range files {
 		macroProcessor := macroprocessor.MakeMacroProcessor(0)
 		expanded := []string{}
-    for _, line := range strings.Split(files[i].Data, "\n") {
+		for _, line := range strings.Split(files[i].Data, "\n") {
 			lines, err := macroProcessor.ProcessLine(line)
 			if err != nil {
 				log.Print(err)
 			}
 			expanded = append(expanded, lines...)
-    }
+		}
 
-    asm := assembler.MakeAssembler()
+		asm := assembler.MakeAssembler()
 		{
 			// I believe this should be generated after the linking etc
 			fname := files[i].Name
@@ -424,7 +426,7 @@ func CompileCode() {
 			masmaprg, err := os.Create(fname)
 			if err != nil {
 				log.Printf("couldn't create macro expansion file %s! Ignoring.",
-				fname)
+					fname)
 			} else {
 				defer masmaprg.Close()
 			}
@@ -436,13 +438,13 @@ func CompileCode() {
 
 		println(macroProcessor.MacroReport())
 
-    _, err := asm.SecondPass()
+		_, err := asm.SecondPass()
 		if err != nil {
 			err = fmt.Errorf("error: could not compile: %v", err)
 			terminal.Write(err.Error())
 			return
 		}
-    assemblers = append(assemblers, asm)
+		assemblers = append(assemblers, asm)
 
 		obj, err := asm.GenerateObjectFile()
 		if err != nil {
@@ -455,7 +457,7 @@ func CompileCode() {
 		files[i].Object = obj
 		log.Printf("code compiled successfully: %d symbols, %d relocations",
 			len(obj.Symbols), len(obj.Relocations))
-		
+
 		if sim.SaveTemps {
 			path := files[i].Name
 			base := filepath.Base(path)
@@ -476,7 +478,7 @@ func CompileCode() {
 populateMemory:
 	var executable *ObjectFile
 
-	if  executableProvided {
+	if executableProvided {
 		executable = files[0].Object
 	} else {
 		var err error
@@ -492,7 +494,7 @@ populateMemory:
 		addr := section.Header.Address
 		tail := len(mem)
 		if tail < int(addr) {
-			mem = slices.Grow(mem, int(addr) - tail)
+			mem = slices.Grow(mem, int(addr)-tail)
 		}
 		if int(addr) < tail {
 			panic("section overlap")
@@ -550,9 +552,10 @@ func StepSimulation() {
 		log.Printf("Executing %s with %v", inst.Name, args)
 		handler(&sim, args)
 		switch sim.State {
-		case dubcc.SimStateRun: sim.State = dubcc.SimStatePause
+		case dubcc.SimStateRun:
+			sim.State = dubcc.SimStatePause
 		case dubcc.SimStateIOBlocked:
-		  sim.SetRegister(dubcc.RegPC, oldPc) // actually block
+			sim.SetRegister(dubcc.RegPC, oldPc) // actually block
 		}
 
 		if len(sim.OutWords) > 0 {
