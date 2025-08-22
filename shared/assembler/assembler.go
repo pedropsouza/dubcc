@@ -189,7 +189,7 @@ func (info *Info) handleInstruction(line dubcc.InLine, idata dubcc.Instruction) 
 		index += 1
 		repr := &r[index]
 
-		// try constant interpretation
+		//1 - try constant interpretation
 		repr.input = arg
 		num, err := ParseNum(arg)
 		if err == nil {
@@ -201,8 +201,7 @@ func (info *Info) handleInstruction(line dubcc.InLine, idata dubcc.Instruction) 
 			r[0].out |= dubcc.OpImmediateFlag
 			continue
 		}
-		// aight it ain't a number
-		// check if it's a register
+		//2 - check if it's a register
 		{
 			regflag := dubcc.MachineWord(dubcc.OpRegAFlag * BoolToInt(index == 1))
 			regflag |= dubcc.MachineWord(dubcc.OpRegBFlag * BoolToInt(index == 2))
@@ -215,14 +214,14 @@ func (info *Info) handleInstruction(line dubcc.InLine, idata dubcc.Instruction) 
 				continue
 			}
 		}
-		{ // check symbol table
+		{ //3 - check symbol table
 			lookup, found := info.symbols[arg]
 			if found {
 				repr.tag = ReprComplete
 				repr.symbol = arg
 				repr.out = dubcc.MachineWord(lookup)
 			} else {
-				// new link should be added
+				//4 - new link should be added
 				from := dubcc.MachineAddress(len(info.output) + index)
 				newLink := info.undefSyms.ChainSym(from, arg)
 				repr.tag = ReprPartial

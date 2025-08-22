@@ -57,7 +57,10 @@ func (mb *MenuBar) Layout(gtx layout.Context, th *material.Theme) layout.Dimensi
 		}),
 
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			btn := FlatButton(th, &mb.helpBtn, "Help")
+			if mb.helpBtn.Clicked(gtx) {
+				mb.showHelpMenu = !mb.showHelpMenu
+			}
+			btn := material.Button(th, &mb.helpBtn, "Help")
 			btn.Background = yellow
 			btn.Color = black
 			btn.Font.Typeface = customFont
@@ -75,7 +78,7 @@ func (mb *MenuBar) Layout(gtx layout.Context, th *material.Theme) layout.Dimensi
 }
 
 func (mb *MenuBar) renderFileMenu(gtx layout.Context, th *material.Theme) layout.Dimensions {
-	size := image.Pt(gtx.Dp(unit.Dp(90)), gtx.Dp(unit.Dp(90)))
+	size := image.Pt(gtx.Dp(unit.Dp(90)), gtx.Dp(unit.Dp(120)))
 	defer clip.Rect{Max: size}.Push(gtx.Ops).Pop()
 	paint.ColorOp{Color: yellow}.Add(gtx.Ops)
 	paint.PaintOp{}.Add(gtx.Ops)
@@ -93,6 +96,24 @@ func (mb *MenuBar) renderFileMenu(gtx layout.Context, th *material.Theme) layout
 			btn := TextButton(th, &mb.saveBtn, "Save")
 			if mb.saveBtn.Clicked(gtx) {
 				mb.showFileMenu = false
+				if currentFilename != "" {
+					err := os.WriteFile(currentFilename, []byte(editor.state.Text()), 0644)
+					if err != nil {
+						log.Printf("Error: couldn't save file: %v", err)
+					} else {
+						log.Printf("File saved succesfully: %s", currentFilename)
+					}
+				} else {
+					renderSaveAsDialog(gtx, th)
+				}
+			}
+			return btn.Layout(gtx)
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			btn := TextButton(th, &mb.saveAsBtn, "Save As")
+			if mb.saveAsBtn.Clicked(gtx) {
+				showSaveDialog = true
+				mb.showFileMenu = false
 			}
 			return btn.Layout(gtx)
 		}),
@@ -100,11 +121,148 @@ func (mb *MenuBar) renderFileMenu(gtx layout.Context, th *material.Theme) layout
 			btn := TextButton(th, &mb.exitBtn, "Exit")
 			if mb.exitBtn.Clicked(gtx) {
 				mb.showFileMenu = false
+				os.Exit(0)
 			}
 			return btn.Layout(gtx)
 		}),
 	)
 }
+
+func renderSaveAsDialog(gtx layout.Context, th *material.Theme) layout.Dimensions {
+	if !showSaveDialog {
+		return layout.Dimensions{}
+	}
+
+	size := gtx.Constraints.Max
+	defer clip.Rect{Max: size}.Push(gtx.Ops).Pop()
+	paint.ColorOp{Color: color.NRGBA{R: 0, G: 0, B: 0, A: 180}}.Add(gtx.Ops)
+	paint.PaintOp{}.Add(gtx.Ops)
+
+	cardW := int(float32(size.X) * 0.9)
+	cardH := int(float32(size.Y) * 0.9)
+	offX := (size.X - cardW) / 2
+	offY := (size.Y - cardH) / 2
+	defer op.Offset(image.Pt(offX, offY)).Push(gtx.Ops).Pop()
+
+	gtx2 := gtx
+	gtx2.Constraints = layout.Constraints{
+		Min: image.Pt(cardW, cardH),
+		Max: image.Pt(cardW, cardH),
+	}
+
+	radius := gtx2.Dp(unit.Dp(12))
+	defer clip.UniformRRect(image.Rectangle(clip.Rect{Max: image.Pt(cardW, cardH)}), radius).Push(gtx2.Ops).Pop()
+
+	paint.ColorOp{Color: white}.Add(gtx2.Ops)
+	paint.PaintOp{}.Add(gtx2.Ops)
+
+	inset := layout.UniformInset(unit.Dp(12))
+	return inset.Layout(gtx2, func(gtx layout.Context) layout.Dimensions {
+		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				title := material.H5(th, "Save As")
+				title.Color = black
+				return title.Layout(gtx)
+			}),
+			layout.Rigid(layout.Spacer{Height: unit.Dp(12)}.Layout),
+			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+				return saveExplorer.Layout(gtx, th)
+			}),
+
+			layout.Rigid(layout.Spacer{Height: unit.Dp(12)}.Layout),
+
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						lbl := material.Body1(th, "Nome do arquivo:")
+						lbl.Color = black
+						return lbl.Layout(gtx)
+					}),
+					layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+							layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+								ed := material.Editor(th, &filenameEditor, "exemplo.asm")
+								ed.Color = black
+								return ed.Layout(gtx)
+							}),
+							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+								if !strings.HasSuffix(filenameEditor.Text(), ".asm") {
+									text := strings.TrimSuffix(filenameEditor.Text(), ".asm")
+									if lastDot := strings.LastIndex(text, "."); lastDot != -1 {
+										text = text[:lastDot]
+									}
+								}
+								return layout.Dimensions{}
+							}),
+						)
+					}),
+				)
+			}),
+
+			layout.Rigid(layout.Spacer{Height: unit.Dp(16)}.Layout),
+
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+					layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+						return layout.Dimensions{}
+					}),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						if saveCancelBtn.Clicked(gtx) {
+							showSaveDialog = false
+							filenameEditor.SetText("")
+						}
+						btn := material.Button(th, &saveCancelBtn, "Cancel")
+						btn.Background = color.NRGBA{R: 128, G: 128, B: 128, A: 255}
+						btn.Color = white
+						return btn.Layout(gtx)
+					}),
+					layout.Rigid(layout.Spacer{Width: unit.Dp(8)}.Layout),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						if saveConfirmBtn.Clicked(gtx) {
+							performSaveAs()
+						}
+						btn := material.Button(th, &saveConfirmBtn, "Save")
+						btn.Background = yellow
+						btn.Color = black
+						return btn.Layout(gtx)
+					}),
+				)
+			}),
+		)
+	})
+}
+
+func performSaveAs() {
+	filename := strings.TrimSpace(filenameEditor.Text())
+	if filename == "" {
+		log.Printf("Name of file must contain something.")
+		return
+	}
+
+	// Garantir extensão .asm
+	if !strings.HasSuffix(filename, ".asm") {
+		if lastDot := strings.LastIndex(filename, "."); lastDot != -1 {
+			filename = filename[:lastDot]
+		}
+		filename += ".asm"
+	}
+
+	currentDir := saveExplorer.current
+	fullPath := filepath.Join(currentDir, filename)
+
+	content := editor.state.Text()
+	err := os.WriteFile(fullPath, []byte(content), 0644)
+	if err != nil {
+		log.Printf("Error: couldn't save file: %v", err)
+	} else {
+		log.Printf("File saved succesfully: %s", fullPath)
+		showSaveDialog = false
+		filenameEditor.SetText("")
+		currentFilename = fullPath
+	}
+}
+
 func textLayout(gtx layout.Context, th *material.Theme, title string) layout.Dimensions {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {

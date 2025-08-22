@@ -44,6 +44,16 @@ var terminal *Terminal
 
 var showExplorer bool
 var fe = NewFileExplorer()
+
+var showSaveDialog bool
+var saveExplorer *FileExplorer
+var filenameEditor widget.Editor
+var saveConfirmBtn widget.Clickable
+var saveCancelBtn widget.Clickable
+var showHelpMenu bool
+var helpMenu = NewHelpMenu()
+var currentFilename string
+
 var memCap dubcc.MachineAddress
 var sim dubcc.Sim
 var assemblerSingleton assembler.Info
@@ -52,8 +62,8 @@ var assemblerSingleton assembler.Info
 var logoData []byte
 
 type MenuBar struct {
-	fileBtn, hexBtn, helpBtn                 widget.Clickable
-	openBtn, saveBtn, exitBtn                widget.Clickable
+	fileBtn, hexBtn, editBtn, helpBtn                widget.Clickable
+	openBtn, saveBtn, saveAsBtn, exitBtn     widget.Clickable
 	showFileMenu, showEditMenu, showHelpMenu bool
 	menuWidth                                int
 	backdrop                                 widget.Clickable
@@ -208,6 +218,9 @@ func init() {
 		}
 		showExplorer = false
 	}
+	saveExplorer = NewFileExplorer()
+	saveExplorer.SetStartDir(".")
+	saveExplorer.OnSelect = nil
 	logoWidget = widget.Image{
 		Src: paint.NewImageOp(img),
 		Fit: widget.Contain,

@@ -186,7 +186,6 @@ func (fe *FileExplorer) listArea(gtx layout.Context, th *material.Theme) layout.
 				btn.Color = black
 			}
 
-			// info adicional
 			var sub string
 			if info, err := de.Info(); err == nil {
 				if isDir {
@@ -205,6 +204,7 @@ func (fe *FileExplorer) listArea(gtx layout.Context, th *material.Theme) layout.
 					fe.setDir(full, false)
 				} else if fe.OnSelect != nil {
 					fe.OnSelect(full)
+					currentFilename = full
 				}
 			}
 
@@ -225,7 +225,6 @@ func (fe *FileExplorer) setDir(path string, replaceTop bool) {
 		}
 	}
 	ents, _ := os.ReadDir(abs)
-	// aplica filtro + ordena: dirs primeiro, depois arquivos (alfabético)
 	filtered := ents[:0]
 	for _, e := range ents {
 		if fe.extFilter != nil && len(fe.extFilter) > 0 && !e.IsDir() {
@@ -239,7 +238,7 @@ func (fe *FileExplorer) setDir(path string, replaceTop bool) {
 	sort.Slice(filtered, func(i, j int) bool {
 		di, dj := filtered[i].IsDir(), filtered[j].IsDir()
 		if di != dj {
-			return di // diretórios vêm antes
+			return di
 		}
 		return strings.ToLower(filtered[i].Name()) < strings.ToLower(filtered[j].Name())
 	})
@@ -247,7 +246,6 @@ func (fe *FileExplorer) setDir(path string, replaceTop bool) {
 	fe.entries = filtered
 	fe.current = abs
 
-	// histórico
 	if len(fe.history) == 0 {
 		fe.history = []string{abs}
 	} else if replaceTop {
@@ -257,13 +255,11 @@ func (fe *FileExplorer) setDir(path string, replaceTop bool) {
 	}
 }
 
-// utilitários
-
 func splitPathSegments(p string) []string {
 	if p == "" || p == "/" {
 		return []string{"/"}
 	}
-	vol := filepath.VolumeName(p) // no Windows, "C:"
+	vol := filepath.VolumeName(p)
 	p = strings.TrimPrefix(p, vol)
 	parts := strings.Split(strings.Trim(p, string(filepath.Separator)), string(filepath.Separator))
 	if vol != "" {
@@ -279,7 +275,6 @@ func joinSegments(segs []string) string {
 	if len(segs) == 0 {
 		return string(filepath.Separator)
 	}
-	// trata raiz
 	if segs[0] == string(filepath.Separator) || strings.HasSuffix(segs[0], string(filepath.Separator)) {
 		return filepath.Join(segs...)
 	}

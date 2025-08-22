@@ -107,6 +107,40 @@ func mainLayout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 				return fe.Layout(gtx2, th)
 			})
 		}),
+		layout.Stacked(func(gtx layout.Context) layout.Dimensions {
+			if !menuBar.showHelpMenu {
+				return layout.Dimensions{}
+			}
+			size := gtx.Constraints.Max
+			defer clip.Rect{Max: size}.Push(gtx.Ops).Pop()
+			paint.ColorOp{Color: color.NRGBA{R: 0, G: 0, B: 0, A: 180}}.Add(gtx.Ops)
+			paint.PaintOp{}.Add(gtx.Ops)
+
+			cardW := int(float32(size.X) * 0.9)
+			cardH := int(float32(size.Y) * 0.9)
+			offX := (size.X - cardW) / 2
+			offY := (size.Y - cardH) / 2
+			defer op.Offset(image.Pt(offX, offY)).Push(gtx.Ops).Pop()
+
+			gtx2 := gtx
+			gtx2.Constraints = layout.Constraints{
+				Min: image.Pt(cardW, cardH),
+				Max: image.Pt(cardW, cardH),
+			}
+			radius := gtx2.Dp(unit.Dp(12))
+			defer clip.UniformRRect(image.Rectangle(clip.Rect{Max: image.Pt(cardW, cardH)}), radius).Push(gtx2.Ops).Pop()
+
+			paint.ColorOp{Color: white}.Add(gtx2.Ops)
+			paint.PaintOp{}.Add(gtx2.Ops)
+
+			inset := layout.UniformInset(unit.Dp(12))
+			return inset.Layout(gtx2, func(gtx layout.Context) layout.Dimensions {
+				return helpMenu.Layout(gtx, th)
+			})
+		}),
+		layout.Stacked(func(gtx layout.Context) layout.Dimensions {
+			return renderSaveAsDialog(gtx, th)
+		}),
 	)
 }
 
