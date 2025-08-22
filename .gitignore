@@ -1,6 +1,5 @@
 # .gitignore
 
-tags
 assembler/assembler
 assembler/assembler-bin
 simulator/simulator
@@ -9,3 +8,6 @@ linker/linker-bin
 VirtualMachine/VirtualMachine
 VirtualMachine/*.o
 VirtualMachine/MASMAPRG*
+VirtualMachine/*.asm
+VirtualMachine/*.hxp
+tags
