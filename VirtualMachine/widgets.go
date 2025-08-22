@@ -79,6 +79,16 @@ func (mb *MenuBar) renderFileMenu(gtx layout.Context, th *material.Theme) layout
 			btn := TextButton(th, &mb.saveBtn, "Save")
 			if mb.saveBtn.Clicked(gtx) {
 				mb.showFileMenu = false
+				if currentFilename != "" {
+					err := os.WriteFile(currentFilename, []byte(editor.state.Text()), 0644)
+					if err != nil {
+						log.Printf("Error: couldn't save file: %v", err)
+					} else {
+						log.Printf("File saved succesfully: %s", currentFilename)
+					}
+				} else {
+					renderSaveAsDialog(gtx, th)
+				}
 			}
 			return btn.Layout(gtx)
 		}),
@@ -232,6 +242,7 @@ func performSaveAs() {
 		log.Printf("File saved succesfully: %s", fullPath)
 		showSaveDialog = false
 		filenameEditor.SetText("")
+		currentFilename = fullPath
 	}
 }
 

@@ -40,6 +40,7 @@ var saveConfirmBtn widget.Clickable
 var saveCancelBtn widget.Clickable
 var showHelpMenu bool
 var helpMenu = NewHelpMenu()
+var currentFilename string
 
 var memCap dubcc.MachineAddress
 var sim dubcc.Sim
