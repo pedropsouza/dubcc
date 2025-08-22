@@ -208,19 +208,21 @@ func (obj *ObjectFile) buildSymbolTable(info *Info) {
 }
 
 func (obj *ObjectFile) buildRelocationTable(info *Info) {
-	for _, link := range info.undefSyms.links {
-		reloc := Relocation{
-			Offset:     link.from,
-			Addend:     0,
-		}
-
-		for i, sym := range obj.Symbols {
-			if obj.GetString(sym.NameOffset) == link.name {
-				reloc.SetInfo(uint32(i), R_ABSOLUTE)
-				break
+	for symb, addrs := range info.SymbolOccurances() {
+		for _, addr := range addrs {
+			reloc := Relocation{
+				Offset:     addr,
+				Addend:     0,
 			}
+
+			for i, sym := range obj.Symbols {
+				if obj.GetString(sym.NameOffset) == symb {
+					reloc.SetInfo(uint32(i), R_ABSOLUTE)
+					break
+				}
+			}
+			obj.Relocations = append(obj.Relocations, reloc)
 		}
-		obj.Relocations = append(obj.Relocations, reloc)
 	}
 }
 

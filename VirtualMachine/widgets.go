@@ -219,7 +219,7 @@ func CompileCode() {
 	assemblerSingleton = assembler.MakeAssembler()
 	var assemblers = make([]assembler.Info, len(files))
 	linkerSingleton := linker.MakeRelocatorLinker()
-	//linkerSingleton := linker.MakeAbsoluteLinker(20)
+	//linkerSingleton := linker.MakeAbsoluteLinker(0)
 
 	for i := range files {
     asm := assembler.MakeAssembler()

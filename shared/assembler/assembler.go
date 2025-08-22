@@ -21,18 +21,19 @@ var (
 )
 
 type Info struct {
-	isa           dubcc.ISA
-	directives    map[string]DirectiveHandler
-	symbols       map[string]dubcc.MachineAddress
-	undefSyms     UndefSymChain
-	macros        map[string]Macros
-	macroLevel    int
-	macroStack    []MacroFrame
-	output        []dubcc.MachineWord
-	line_counter  dubcc.MachineAddress
-	StartAddress  dubcc.MachineAddress
-	stackSize			dubcc.MachineAddress
-	moduleEnded   bool
+	isa              dubcc.ISA
+	directives       map[string]DirectiveHandler
+	symbols          map[string]dubcc.MachineAddress
+	symbolOccurances map[string][]dubcc.MachineAddress
+	undefSyms        UndefSymChain
+	macros           map[string]Macros
+	macroLevel       int
+	macroStack       []MacroFrame
+	output           []dubcc.MachineWord
+	line_counter     dubcc.MachineAddress
+	StartAddress     dubcc.MachineAddress
+	stackSize		     dubcc.MachineAddress
+	moduleEnded      bool
 }
 
 func (info *Info) GetOutput() []dubcc.MachineWord {
@@ -219,6 +220,10 @@ func (info *Info) handleInstruction(line dubcc.InLine, idata dubcc.Instruction) 
 				repr.symbol = arg
 				repr.out = dubcc.MachineWord(newLink.addr)
 			}
+			info.symbolOccurances[arg] = append(
+				info.symbolOccurances[arg],
+				dubcc.MachineAddress(len(info.output) + index),
+			)
 		}
 		// TODO/FIXME: decide which
 		// syntax we should use to
@@ -233,7 +238,7 @@ func (info *Info) handleInstruction(line dubcc.InLine, idata dubcc.Instruction) 
 		pp.Fprintf(os.Stderr, "adding %v @ %v\n", repr.out, len(info.output))
 		info.output = append(info.output, repr.out)
 	}
-
+	
 	info.line_counter = dubcc.MachineAddress(len(info.output))
 
 	return r, nil
@@ -295,6 +300,10 @@ func (info *Info) GetSymbols() []string {
 	return syms
 }
 
+func (info *Info) SymbolOccurances() map[string][]dubcc.MachineAddress {
+	return info.symbolOccurances
+}
+
 func (info *Info) registerConst(name string, val dubcc.MachineWord) {
 	if name != "" {
 		info.symbols[name] = info.line_counter
@@ -321,6 +330,7 @@ func MakeAssembler() Info {
 		isa:        dubcc.GetDefaultISA(),
 		directives: Directives(),
 		symbols:    make(map[string]dubcc.MachineAddress),
+		symbolOccurances: make(map[string][]dubcc.MachineAddress),
 		macros:     make(map[string]Macros),
 	}
 	

@@ -6,6 +6,7 @@ import (
 	"dubcc/assembler"
 	"fmt"
 	"sort"
+	"github.com/k0kubun/pp/v3"
 )
 
 type ObjectFile = assembler.ObjectFile
@@ -176,8 +177,21 @@ func (linker *Linker) buildGlobalSymbolTable() error {
 					return fmt.Errorf("symbol '%s' defined in multiple objects (obj %d and obj %d)", 
 						symbolName, existing.ObjectIndex, objIdx)
 				}
-				relAddress := linkedSection.BaseAddress + symbol.Value
-				absAddress := linkedSection.AbsAddress + symbol.Value
+
+				relAddress := linkedSection.BaseAddress/2 + symbol.Value
+				absAddress := linkedSection.AbsAddress/2 + symbol.Value
+        
+				fmt.Printf(
+`Symbol %s got
+relative address = %d + %d = %d and 
+absolute address = %d + %d = %d
+`,
+				symbolName,
+				linkedSection.BaseAddress/2, symbol.Value, 
+				linkedSection.BaseAddress/2 + symbol.Value,
+        linkedSection.AbsAddress/2, symbol.Value,
+				linkedSection.AbsAddress/2 + symbol.Value,
+			  )
 
 				linker.SymbolMap[symbolName] = &LinkedSymbol{
 					Symbol:      &symbol,
@@ -221,10 +235,12 @@ func (linker *Linker) secondPass() error {
 	if  err := linker.createExecutableStructure(); err != nil {
 		return err
 	}
+
+	pp.Print(linker.SectionMap)
 	// apply relocations
-	//if  err := linker.applyRelocations(); err != nil {
-	//	return err
-	//}
+	if  err := linker.applyRelocations(); err != nil {
+		return err
+	}
 	// build final symbol table and header
 	if  err := linker.finalizeBinary(); err != nil {
 		return err
@@ -291,9 +307,7 @@ func (linker *Linker) applyRelocations() error {
 			if objIdx > 0 {
 				for i := range objIdx {
 				for _, section := range linker.Objects[i].Sections {
-					if section.Name == ".text" {
-						currentDataOffset += section.Header.Size / 2
-					}
+					currentDataOffset += section.Header.Size / 2
 				}
 			}
 		}
@@ -327,7 +341,7 @@ func (linker *Linker) applyRelocations() error {
 			// apply the relocation
 			switch reloc.GetType() {
 			case R_ABSOLUTE:
-				linker.Executable.Sections[0].Data[relocPosition] = uint16(targetAddress & 0xFFFF)/2
+				linker.Executable.Sections[0].Data[relocPosition] = uint16(targetAddress & 0xFFFF)
 			default:
 				return fmt.Errorf("unsupported relocation type: %d", reloc.GetType())
 			}
