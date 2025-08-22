@@ -64,6 +64,7 @@ func main() {
 	editor.state = wg.NewEditor(th)
 	gvcode.SetDebug(false)
 
+	// commandline arguments parsing
 	if len(os.Args) > 1 {
 		sourceAlreadyRead := false
 		for i := 1; i < len(os.Args); i++ {

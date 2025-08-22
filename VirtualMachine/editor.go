@@ -25,7 +25,7 @@ import (
 	"regexp"
 )
 
-var fontSize unit.Sp = 12
+var fontSize unit.Sp = 18
 
 type (
 	C = layout.Context

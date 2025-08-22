@@ -4,6 +4,7 @@ import (
 	"dubcc"
 	"dubcc/assembler"
 	"dubcc/macroprocessor"
+	"dubcc/linker"
 	"encoding/binary"
 	"image"
 	"image/color"
@@ -19,6 +20,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"github.com/k0kubun/pp/v3"
 )
 
 func (mb *MenuBar) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
@@ -209,10 +211,13 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 }
 
 func CompileCode() {
+	// we definetely should make this function smaller
 	sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
 	macroProcessor := macroprocessor.MakeMacroProcessor()
 	assemblerSingleton = assembler.MakeAssembler()
 	var assemblers = make([]assembler.Info, len(files))
+	//linkerSingleton := linker.MakeRelocatorLinker()
+	//linkerSingleton := linker.MakeAbsoluteLinker(20)
 
 	for i := range files {
     asm := assembler.MakeAssembler()
@@ -227,6 +232,7 @@ func CompileCode() {
 		}
 
 		{
+			// I believe this should be generated after the linking etc
 			masmaprg, err := os.Create("MASMAPRG.ASM")
 			if err != nil {
 				log.Printf("couldn't create macro expansion file MASMAPRG.ASM! Ignoring.")
@@ -244,6 +250,8 @@ func CompileCode() {
 		if err != nil {
 			log.Fatalf("error: could not compile: %v", err)
 		}
+		pp.Print(obj)
+
 		files[i].Object = obj
 		log.Printf("code compiled successfully: %d symbols, %d relocations",
 			len(obj.Symbols), len(obj.Relocations))
@@ -261,6 +269,16 @@ func CompileCode() {
 		}
 	}
 
+	var objects []*assembler.ObjectFile
+	for i := range files {
+		objects = append(objects, files[i].Object)
+	}
+
+	//executable, err := linkerSingleton.GenerateExecutable(objects)
+	//if err != nil {
+	//	log.Print("error: sou um felino bosta\n")
+	//}
+
 	// this is concatenating all the object files in a single memory image
 	var mem []dubcc.MachineWord
 	for _, file := range files {
@@ -270,6 +288,7 @@ func CompileCode() {
 	if len(mem) > len(sim.Mem.Work) {
 		panic("program's too big")
 	}
+
 	startAddressMachineWord := dubcc.MachineWord(assemblers[0].StartAddress)
 	sim.SetRegister(dubcc.RegPC, startAddressMachineWord) // Altera o valor do PC pro valor indicado na diretiva "start"
 	startAddressInt := int(assemblers[0].StartAddress)

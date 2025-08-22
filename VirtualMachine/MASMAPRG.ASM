@@ -1,1 +1,1 @@
-add 20copy 30 20sub 8load 2call facstop
+extr barbar: add 10    mult 2    retend

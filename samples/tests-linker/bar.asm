@@ -1,8 +1,7 @@
 ; bar.asm
-extrn bar
+extr bar
 
-bar:
-    add 10
+bar: add 10
     mult 2
     ret
 end

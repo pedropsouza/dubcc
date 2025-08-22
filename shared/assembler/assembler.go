@@ -2,9 +2,7 @@ package assembler
 
 import (
 	"dubcc"
-	"encoding/binary"
 	"errors"
-	"io"
 	"log"
 	"os"
 	"regexp"
@@ -325,174 +323,6 @@ func MakeAssembler() Info {
 	return info
 }
 
-func (info *Info) GenerateObjectFile() (*ObjectFile, error) {
-	obj := &ObjectFile{
-		stringMap: make(map[string]uint32),
-	}
-	
-	obj.addString("")
-	
-	textSection := Section{
-		Name: ".text",
-		Header: SectionHeader{
-			Type:  SHT_PROGBITS,
-			Flags: 0x6, // allocatable + executable
-			Size:  uint32(len(info.GetOutput()) * 2), // 2 bytes per word
-		},
-		Data: info.GetOutput(),
-	}
-	textSection.Header.NameOffset = obj.addString(".text")
-	obj.Sections = []Section{textSection}
-	
-	obj.buildSymbolTable(info)
-	obj.buildRelocationTable(info)
-	
-	obj.Header.Magic = [4]byte{'D', 'U', 'L', 'F'}
-	obj.Header.SectionCount = uint16(len(obj.Sections))
-	obj.Header.SymbolCount = uint16(len(obj.Symbols))
-	obj.Header.RelocCount = uint16(len(obj.Relocations))
-	
-	return obj, nil
-}
-
-func (obj *ObjectFile) addString(s string) uint32 {
-	if offset, exists := obj.stringMap[s]; exists {
-		return offset
-	}
-	offset := uint32(len(obj.StringTable))
-	obj.StringTable = append(obj.StringTable, []byte(s)...)
-	obj.StringTable = append(obj.StringTable, 0) // null terminator
-	obj.stringMap[s] = offset
-	return offset
-}
-
-func (obj *ObjectFile) buildSymbolTable(info *Info) {
-	// defined symbols
-	for name, addr := range info.symbols {
-		symbol := Symbol{
-			NameOffset: obj.addString(name),
-			Value:      addr,
-			Size:       8, // default size
-			Section:    0, // all symbols in .text section
-		}
-		
-		// check if symbol is global
-		if IsGlobalSymbol(name) {
-			symbol.SetInfo(STB_GLOBAL, STT_NOTYPE)
-		} else {
-			symbol.SetInfo(STB_LOCAL, STT_NOTYPE)
-		}
-		
-		obj.Symbols = append(obj.Symbols, symbol)
-	}
-	
-	// external symbols as undefined
-	for externSym := range externSymbols {
-		if _, exists := info.symbols[externSym]; !exists {
-			symbol := Symbol{
-				NameOffset: obj.addString(externSym),
-				Value:      0,     // Undefined
-				Size:       0,
-				Section:    0xFFF1, // SHN_UNDEF
-			}
-			symbol.SetInfo(STB_GLOBAL, STT_NOTYPE)
-			obj.Symbols = append(obj.Symbols, symbol)
-		}
-	}
-}
-
-func (obj *ObjectFile) buildRelocationTable(info *Info) {
-	for _, link := range info.undefSyms.links {
-		reloc := Relocation{
-			Offset:     link.from,
-			Addend:     0,
-			SymbolName: link.name,
-		}
-
-		for i, sym := range obj.Symbols {
-			if obj.getString(sym.NameOffset) == link.name {
-				reloc.SetInfo(uint32(i), R_ABSOLUTE)
-				break
-			}
-		}
-		obj.Relocations = append(obj.Relocations, reloc)
-	}
-}
-
-func (obj *ObjectFile) getString(offset uint32) string {
-	if offset >= uint32(len(obj.StringTable)) {
-		return ""
-	}
-	end := offset
-	for end < uint32(len(obj.StringTable)) && obj.StringTable[end] != 0 {
-		end++
-	}
-	return string(obj.StringTable[offset:end])
-}
-
-func (obj *ObjectFile) Write(w io.Writer) error {
-	headerSize := uint32(40) // fixed header size??
-	sectionHeaderSize := uint32(len(obj.Sections) * 36) // 36 bytes per section header
-	
-	obj.Header.SectionOffset = headerSize
-	obj.Header.SymbolOffset = obj.Header.SectionOffset + sectionHeaderSize
-	obj.Header.RelocOffset = obj.Header.SymbolOffset + uint32(len(obj.Symbols)*20) // 20 bytes per symbol
-	obj.Header.StringOffset = obj.Header.RelocOffset + uint32(len(obj.Relocations)*24) // 24 bytes per relocation
-	
-	// header
-	if err := binary.Write(w, binary.LittleEndian, obj.Header); err != nil {
-		return err
-	}
-	// section headers
-	for _, section := range obj.Sections {
-		if err := binary.Write(w, binary.LittleEndian, section.Header); err != nil {
-			return err
-		}
-	}
-	// symbols
-	for _, symbol := range obj.Symbols {
-		if err := binary.Write(w, binary.LittleEndian, symbol); err != nil {
-			return err
-		}
-	}
-	// relocations
-	for _, reloc := range obj.Relocations {
-		if err := binary.Write(w, binary.LittleEndian, reloc.Offset); err != nil {
-			return err
-		}
-		if err := binary.Write(w, binary.LittleEndian, reloc.Info); err != nil {
-			return err
-		}
-		if err := binary.Write(w, binary.LittleEndian, reloc.Addend); err != nil {
-			return err
-		}
-	}
-	// string table
-	if _, err := w.Write(obj.StringTable); err != nil {
-		return err
-	}
-	// section data
-	for _, section := range obj.Sections {
-		for _, word := range section.Data {
-			if err := binary.Write(w, binary.LittleEndian, word); err != nil {
-				return err
-			}
-		}
-	}
-	
-	return nil
-}
-
-func (obj *ObjectFile) ToMachineWordSlice() []dubcc.MachineWord {
-    var words []dubcc.MachineWord
-    for _, section := range obj.Sections {
-        if section.Header.Flags == 0x6 {
-            words = append(words, section.Data...)
-        }
-    }
-    return words
-}
-
 func Directives() map[string]DirectiveHandler {
 	return map[string]DirectiveHandler{
 		"space": {
@@ -519,7 +349,7 @@ func Directives() map[string]DirectiveHandler {
 			},
 			numArgs: 0,
 		},
-		"extdef": {
+		"extr": {
 			f: func(info *Info, line dubcc.InLine) {
 				symbolName := line.Args[0]
 				globalSymbols[symbolName] = true
@@ -530,10 +360,10 @@ func Directives() map[string]DirectiveHandler {
 			},
 			numArgs: 1,
 		},
-		"extr": {
+		"extdef": {
 			f: func(info *Info, line dubcc.InLine) {
-				if line.Label == "" {
-					log.Fatalf("extr directive requires a label")
+				if len(line.Args) != 1 {
+					log.Fatalf("extdef requires a label, got %d", len(line.Args)) // TODO: got what??
 				}
 				externSymbols[line.Label] = true
 				log.Printf("declared external symbol: %s", line.Label)
