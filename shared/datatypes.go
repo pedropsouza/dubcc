@@ -68,6 +68,7 @@ type SimState = byte
 const (
 	SimStateHalt = iota
 	SimStateRun
+	SimStateLoop
 	SimStateIOBlocked
 	SimStatePause
 )
