@@ -278,7 +278,7 @@ func CompileCode() {
 
 	executable, err := linkerSingleton.GenerateExecutable(objects)
 	if err != nil {
-		log.Printf("error: sou um felino bosta\n%s\n", err.Error())
+		log.Printf("error: could not generate an executable\n%s\n", err.Error())
 	}
 
 	// this is concatenating all the object files in a single memory image
@@ -296,7 +296,7 @@ func CompileCode() {
 			mem = slices.Grow(mem, int(addr) - tail)
 		}
 		if int(addr) < tail {
-			panic("Section overlap")
+			panic("section overlap")
 		}
 		mem = append(mem, section.Data...)
 	}

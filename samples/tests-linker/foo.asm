@@ -1,8 +1,8 @@
-; foo.assm
-extdef bar
+; foo.asm
+fac: extdef
 
 main: load 10   
-    call bar
+    call fac
     stop
 end
     
