@@ -6,6 +6,11 @@ import (
 	"dubcc/assembler"
 	"dubcc/linker"
 	_ "embed"
+	"image/png"
+	_ "image/png"
+	"log"
+	"os"
+
 	"gioui.org/app"
 	"gioui.org/op"
 	"gioui.org/op/paint"
@@ -15,10 +20,6 @@ import (
 	"github.com/oligo/gvcode"
 	"github.com/oligo/gvcode/addons/completion"
 	wg "github.com/oligo/gvcode/widget"
-	"image/png"
-	_ "image/png"
-	"log"
-	"os"
 )
 
 type LinkerMode = linker.LinkerMode
@@ -26,16 +27,16 @@ type MachineAddress = dubcc.MachineAddress
 
 const (
 	Relocator = linker.Relocator
-	Absolute = linker.Absolute
+	Absolute  = linker.Absolute
 )
 
 type SourceFile struct {
-	Name 		string
-	Data		string
-	Object	*assembler.ObjectFile
+	Name   string
+	Data   string
+	Object *assembler.ObjectFile
 }
 
-var files	[]SourceFile
+var files []SourceFile
 var linkerMode LinkerMode
 var loadAddress MachineAddress
 var window *app.Window
@@ -93,7 +94,7 @@ func main() {
 						log.Fatal("error: " + err.Error())
 					}
 
-				} 
+				}
 			case "-s", "--save-temps":
 				sim.SaveTemps = true
 			default:
@@ -103,8 +104,8 @@ func main() {
 					continue
 				}
 				file := SourceFile{
-					Name: string(arg),
-					Data: string(code),
+					Name:   string(arg),
+					Data:   string(code),
 					Object: nil,
 				}
 				files = append(files, file)
@@ -113,7 +114,7 @@ func main() {
 					sourceAlreadyRead = true
 				}
 			}
-	  }
+		}
 	}
 
 	go func() {

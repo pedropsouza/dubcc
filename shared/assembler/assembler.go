@@ -3,13 +3,14 @@ package assembler
 import (
 	"dubcc"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
-	"fmt"
+
 	"github.com/k0kubun/pp/v3"
 )
 
@@ -30,10 +31,11 @@ type Info struct {
 	macroLevel       int
 	macroStack       []MacroFrame
 	output           []dubcc.MachineWord
-	lineCounter     dubcc.MachineAddress
+	lineCounter      dubcc.MachineAddress
 	StartAddress     dubcc.MachineAddress
-	stackSize		     dubcc.MachineAddress
+	stackSize        dubcc.MachineAddress
 	moduleEnded      bool
+	Errors           dubcc.ErrorList
 }
 
 func (info *Info) GetOutput() []dubcc.MachineWord {
@@ -41,7 +43,7 @@ func (info *Info) GetOutput() []dubcc.MachineWord {
 }
 
 type DirectiveHandler struct {
-	f       func(info *Info, line dubcc.InLine)
+	f       func(info *Info, line dubcc.InLine) error
 	numArgs int
 }
 
@@ -221,7 +223,7 @@ func (info *Info) handleInstruction(line dubcc.InLine, idata dubcc.Instruction) 
 			}
 			info.symbolOccurances[arg] = append(
 				info.symbolOccurances[arg],
-				dubcc.MachineAddress(len(info.output) + index),
+				dubcc.MachineAddress(len(info.output)+index),
 			)
 		}
 		// TODO/FIXME: decide which
@@ -237,7 +239,7 @@ func (info *Info) handleInstruction(line dubcc.InLine, idata dubcc.Instruction) 
 		pp.Fprintf(os.Stderr, "adding %v @ %v\n", repr.out, len(info.output))
 		info.output = append(info.output, repr.out)
 	}
-	
+
 	info.lineCounter = dubcc.MachineAddress(len(info.output))
 
 	return r, nil
@@ -320,66 +322,74 @@ type ObjectInfo struct {
 var globalObjectInfoMap map[*Info]*ObjectInfo
 
 func MakeAssembler() Info {
-  // when assembling more than 1 file
+	// when assembling more than 1 file
 	if globalObjectInfoMap == nil {
 		globalObjectInfoMap = make(map[*Info]*ObjectInfo)
 	}
-	
+
 	info := Info{
-		isa:        dubcc.GetDefaultISA(),
-		directives: Directives(),
-		symbols:    make(map[string]dubcc.MachineAddress),
+		isa:              dubcc.GetDefaultISA(),
+		directives:       Directives(),
+		symbols:          make(map[string]dubcc.MachineAddress),
 		symbolOccurances: make(map[string][]dubcc.MachineAddress),
-		macros:     make(map[string]Macros),
+		macros:           make(map[string]Macros),
+		Errors:           dubcc.ErrorList{ErrName: make([]error, 0)},
 	}
-	
+
 	return info
 }
 
 func Directives() map[string]DirectiveHandler {
 	return map[string]DirectiveHandler{
 		"space": {
-			f: func(info *Info, line dubcc.InLine) {
+			f: func(info *Info, line dubcc.InLine) error {
 				info.registerConst(line.Label, 0)
+				return nil
 			},
 			numArgs: 0,
 		},
 		"const": {
-			f: func(info *Info, line dubcc.InLine) {
+			f: func(info *Info, line dubcc.InLine) error {
 				num, err := ParseNum(line.Args[0])
-				if err != nil {
-					log.Fatalf("can't decide value for const %v: %v", line.Label, err)
-				}
+
 				info.registerConst(line.Label, dubcc.MachineWord(num))
+				if err != nil {
+					return errors.New("can't decide value for const %v: %v")
+				}
+				return nil
 			},
 			numArgs: 1,
 		},
 		"end": {
-			f: func(info *Info, line dubcc.InLine) {
+			f: func(info *Info, line dubcc.InLine) error {
 				info.moduleEnded = true
 				moduleEnded = true
 				log.Printf("module ended at address 0x%x", info.lineCounter)
+				return nil
 			},
 			numArgs: 0,
 		},
 		"extr": {
-			f: func(info *Info, line dubcc.InLine) {
+			f: func(info *Info, line dubcc.InLine) error {
 				symbolName := line.Args[0]
 				globalSymbols[symbolName] = true
 				log.Printf("declared global symbol: %s", symbolName)
 				if addr, exists := info.symbols[symbolName]; exists {
 					log.Printf("symbol %s already defined at 0x%x, marking as global", symbolName, addr)
 				}
+				return nil
 			},
 			numArgs: 1,
 		},
 		"extdef": {
-			f: func(info *Info, line dubcc.InLine) {
+			f: func(info *Info, line dubcc.InLine) error {
 				if line.Label == "" {
-					log.Fatalf("extdef requires a label, got %s", line.Label)
+					return errors.New("extdef requires a label, got " + line.Label)
+				} else {
+					externSymbols[line.Label] = true
+					log.Printf("declared external symbol: %s", line.Label)
+					return nil
 				}
-				externSymbols[line.Label] = true
-				log.Printf("declared external symbol: %s", line.Label)
 			},
 			numArgs: 0,
 		},
@@ -392,12 +402,14 @@ func Directives() map[string]DirectiveHandler {
 				stackSize := dubcc.MachineAddress(num)
 				maxStackSize = &stackSize
 				log.Printf("set maximum stack size to %d words", stackSize)
+
 			},
 			numArgs: 1,
 		},
 		"start": {
 			f: func(info *Info, line dubcc.InLine) {
 				if len(line.Args) != 1 {
+					dubcc.PrintError(dubcc.Oi)
 					log.Fatalf("start directive requires one argument (address), got %d", len(line.Args))
 				}
 				addrStr := line.Args[0]
