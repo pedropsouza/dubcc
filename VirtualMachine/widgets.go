@@ -213,6 +213,7 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 					sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
 					startAddressMachineWord := dubcc.MachineWord(assemblerSingleton.StartAddress)
 					sim.SetRegister(dubcc.RegPC, startAddressMachineWord)
+					terminal.Clear()
 					WipeMemory()
 				}
 				return resetBtnView.Layout(gtx)
@@ -222,6 +223,7 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 }
 
 func CompileCode() {
+	terminal.Clear()
 	sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
 	if len(files) < 1 {
 		files = append(files, SourceFile{Name: "editor", Data: ""})
@@ -366,6 +368,7 @@ func StepSimulation() {
 		argsTerm := instPos + 1 + dubcc.MachineAddress(inst.NumArgs)
 		// set pc before calling the handler
 		// that way branching works
+		oldPc := sim.GetRegister(dubcc.RegPC)
 		nextPc := (pc + dubcc.MachineWord(1+inst.NumArgs)) % dubcc.MachineWord(len(sim.Mem.Work))
 		sim.MapRegister(
 			dubcc.RegPC,
@@ -381,8 +384,14 @@ func StepSimulation() {
 		args := sim.Mem.Work[instPos:argsTerm]
 		log.Printf("Executing %s with %v", inst.Name, args)
 		handler(&sim, args)
-		if sim.State != dubcc.SimStateHalt {
-			sim.State = dubcc.SimStatePause
+		switch sim.State {
+		case dubcc.SimStateRun: sim.State = dubcc.SimStatePause
+		case dubcc.SimStateIOBlocked:
+		  sim.SetRegister(dubcc.RegPC, oldPc) // actually block
+		}
+
+		if len(sim.OutWords) > 0 {
+			terminal.Write(string(sim.RxOutWord()))
 		}
 	}
 }

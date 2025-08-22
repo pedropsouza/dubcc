@@ -59,8 +59,8 @@ type Sim struct {
 	State     SimState
 	SaveTemps	bool
 	TempDir   string
-	inWords   []MachineWord
-	outWords  []MachineWord
+	InWords   []MachineWord
+	OutWords  []MachineWord
 }
 
 type SimState = byte
@@ -68,6 +68,7 @@ type SimState = byte
 const (
 	SimStateHalt = iota
 	SimStateRun
+	SimStateIOBlocked
 	SimStatePause
 )
 
@@ -147,13 +148,24 @@ func (s *Sim) MapRegister(regAddress MachineAddress, mapf func(MachineWord) Mach
 	s.Registers[regAddress] = mapf(old)
 }
 
-func (sim *Sim) recvWord(w MachineWord) {
-	sim.inWords = append(sim.inWords, w)
+func (sim *Sim) TxInWord(w MachineWord) {
+	sim.InWords = append(sim.InWords, w)
 }
 
-func (sim *Sim) dlvWord() MachineWord {
-	sim.outWords = append(sim.outWords, sim.inWords[len(sim.inWords)-1])
-	return sim.outWords[len(sim.outWords)-1]
+func (sim *Sim) TxOutWord(w MachineWord) {
+	sim.OutWords = append(sim.OutWords, w)
+}
+
+func (sim *Sim) RxInWord() MachineWord {
+	word := sim.InWords[0]
+	sim.InWords = sim.InWords[1:]
+	return word
+}
+
+func (sim *Sim) RxOutWord() MachineWord {
+	word := sim.OutWords[0]
+	sim.OutWords = sim.OutWords[1:]
+	return word
 }
 
 func MakeSim(memSize MachineAddress) Sim {

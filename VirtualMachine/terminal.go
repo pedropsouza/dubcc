@@ -1,6 +1,7 @@
 package main
 
 import (
+	"dubcc"
 	"strings"
 	"sync"
 
@@ -22,10 +23,14 @@ type Terminal struct {
 	waiting        bool
 }
 
+func (t *Terminal) Clear() {
+	t.lines = make([]string, 1)
+}
+
 func NewTerminal(theme *material.Theme) *Terminal {
 	t := &Terminal{
 		theme:     theme,
-		lines:     make([]string, 0),
+		lines:     make([]string, 1),
 		inputChan: make(chan string, 1),
 	}
 
@@ -39,10 +44,13 @@ func (t *Terminal) Write(text string) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	lines := strings.Split(text, "\n")
-	for _, line := range lines {
-		t.lines = append(t.lines, line)
+	inLines := strings.Split(text, "\n")
+	targetLine := &t.lines[len(t.lines)-1]
+	*targetLine += inLines[0]
+	for _, xtraLine := range inLines[1:] {
+		t.lines = append(t.lines, xtraLine)
 	}
+
 	t.scrollArea.Position.Offset = 1e6
 }
 
@@ -72,8 +80,8 @@ func (t *Terminal) layoutOutput(gtx layout.Context) layout.Dimensions {
 				line := t.lines[i]
 				t.mu.RUnlock()
 
-				label := material.Label(t.theme, unit.Sp(12), line)
-				label.Color = red
+				label := material.Label(t.theme, unit.Sp(16), line)
+				label.Color = white
 				return label.Layout(gtx)
 			})
 		})
@@ -90,6 +98,8 @@ func (t *Terminal) layoutInput(gtx layout.Context) layout.Dimensions {
 			input := strings.TrimSpace(t.editorTerminal.Text())
 			if input != "" {
 				t.Write("> " + input)
+
+				sim.TxInWord(dubcc.MachineWord([]byte(input)[0]))
 
 				select {
 				case t.inputChan <- input:

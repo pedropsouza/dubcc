@@ -211,12 +211,16 @@ func InstHandlers() map[string]InstHandler {
 
 		}),
 		"read": mutateState1Handler(func(s *Sim, value *MachineWord) {
-			var char = s.dlvWord()
-			s.SetRegister(MachineAddress(*value), char)
-
+			s.State = SimStateIOBlocked
+			if len(s.InWords) > 0 {
+			  var word = s.RxInWord()
+			  *value = word
+				s.State = SimStateRun
+		  }
 		}),
 		"write": mutateState1Handler(func(s *Sim, value *MachineWord) {
-
+			var word = *value
+			s.TxOutWord(word)
 		}),
 	}
 }
