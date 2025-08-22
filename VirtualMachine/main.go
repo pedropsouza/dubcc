@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"dubcc"
 	"dubcc/assembler"
+	"dubcc/linker"
 	_ "embed"
 	"gioui.org/app"
 	"gioui.org/op"
@@ -20,6 +21,14 @@ import (
 	"os"
 )
 
+type LinkerMode = linker.LinkerMode
+type ParseNum = assembler.ParseNum()
+
+const (
+	Relocator = linker.Relocator
+	Absolute = linker.Absolute
+)
+
 type SourceFile struct {
 	Name 		string
 	Data		string
@@ -27,6 +36,8 @@ type SourceFile struct {
 }
 
 var files	[]SourceFile
+var linkerMode LinkerMode
+var loadAddress LinkerMode
 var window *app.Window
 var register *app.Window
 var editor EditorApp
@@ -67,11 +78,19 @@ func main() {
 	// commandline arguments parsing
 	if len(os.Args) > 1 {
 		sourceAlreadyRead := false
+		linkerMode = Relocator
 		for i := 1; i < len(os.Args); i++ {
 			arg := os.Args[i]
 			switch arg {
 			case "-l", "--lst":
 				log.Fatal("not implemented xd")
+			case "-a", "--absolute":
+				if len(os.Args) == i+1 {
+					log.Fatal("usage: --absolute <load address>")
+				} else {
+					linkerMode = Absolute
+					loadAddress = ParseNum(os.Args[i+1])
+				} 
 			case "-s", "--save-temps":
 				sim.SaveTemps = true
 			default:

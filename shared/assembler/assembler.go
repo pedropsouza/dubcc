@@ -181,7 +181,7 @@ func (info *Info) handleInstruction(line dubcc.InLine, idata dubcc.Instruction) 
 
 		// try constant interpretation
 		repr.input = arg
-		num, err := parseNum(arg)
+		num, err := ParseNum(arg)
 		if err == nil {
 			repr.tag = ReprComplete
 			repr.symbol = arg
@@ -257,7 +257,7 @@ func (info *Info) SecondPass() map[string]dubcc.MachineAddress {
 	return info.symbols
 }
 
-func parseNum(in string) (num uint64, err error) {
+func ParseNum(in string) (num uint64, err error) {
 	b2 := regexp.MustCompile("^0b([0-1]+)$")
 	b8 := regexp.MustCompile("^0o([0-7]+)$")
 	b10 := regexp.MustCompile("^([0-9]+)$")
@@ -346,7 +346,7 @@ func Directives() map[string]DirectiveHandler {
 		},
 		"const": {
 			f: func(info *Info, line dubcc.InLine) {
-				num, err := parseNum(line.Args[0])
+				num, err := ParseNum(line.Args[0])
 				if err != nil {
 					log.Fatalf("can't decide value for const %v: %v", line.Label, err)
 				}
@@ -385,7 +385,7 @@ func Directives() map[string]DirectiveHandler {
 		},
 		"stack": {
 			f: func(info *Info, line dubcc.InLine) {
-				num, err := parseNum(line.Args[0])
+				num, err := ParseNum(line.Args[0])
 				if err != nil {
 					log.Fatalf("can't parse stack size %v: %v", line.Args[0], err)
 				}
@@ -401,7 +401,7 @@ func Directives() map[string]DirectiveHandler {
 					log.Fatalf("start directive requires one argument (address), got %d", len(line.Args))
 				}
 				addrStr := line.Args[0]
-				addr, err := parseNum(addrStr)
+				addr, err := ParseNum(addrStr)
 				if err != nil {
 					log.Fatalf("invalid start address: %v", err)
 				}

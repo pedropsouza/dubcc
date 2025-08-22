@@ -7,4 +7,4 @@ simulator/simulator
 debug/debug
 VirtualMachine/VirtualMachine
 VirtualMachine/*.o
-VirtualMachine/MASMAPRG.ASM
+VirtualMachine/MASMAPRG*

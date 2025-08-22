@@ -4,7 +4,8 @@ import (
 	"dubcc"
 	"dubcc/assembler"
 	"dubcc/linker"
-	//"dubcc/macroprocessor"
+	"dubcc/macroprocessor"
+	"fmt"
 	"encoding/binary"
 	"image"
 	"image/color"
@@ -215,38 +216,38 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 func CompileCode() {
 	// we definetely should make this function smaller
 	sim.Registers = dubcc.StartupRegisters(&sim.Isa, dubcc.MachineAddress(len(sim.Mem.Work)))
-	//macroProcessor := macroprocessor.MakeMacroProcessor()
-	assemblerSingleton = assembler.MakeAssembler()
 	var assemblers = make([]assembler.Info, len(files))
-	linkerSingleton := linker.MakeRelocatorLinker()
-	//linkerSingleton := linker.MakeAbsoluteLinker(0)
+
+	switch linkerMode {
+	case Relocator:
+		linkerSingleton := linker.MakeRelocatorLinker()
+	case Absolute:
+		linkerSingleton := linker.MakeAbsoluteLinker(0)
+	}
 
 	for i := range files {
-    asm := assembler.MakeAssembler()
-    for _, line := range strings.SplitSeq(files[i].Data, "\n") {
-        asm.FirstPassString(line)
-    }
+		macroProcessor := macroprocessor.MakeMacroProcessor()
+		asm := assembler.MakeAssembler()
+    for line := range strings.SplitSeq(files[i].Data, "\n") {
+        macroProcessor.ProcessLine(line)
+		}
+		fname := files[i].Name
+		fnameParts := strings.Split(fname, "/")
+		fname = fnameParts[len(fnameParts)-1]
+		fname = fmt.Sprintf("MASMAPRG-%s", fname)
+		masmaprg, err := os.Create(fname)
+		if err != nil {
+			log.Printf("couldn't create macro expansion file %s! Ignoring.",
+			fname)
+		} else {
+			defer masmaprg.Close()
+		}
+		for _, line := range macroProcessor.GetOutput() {
+			masmaprg.WriteString(line + "\n")
+			asm.FirstPassString(line)
+		}
     asm.SecondPass()
     assemblers = append(assemblers, asm)
-
-		//for line := range strings.SplitSeq(editor.state.Text(), "\n") {
-		//	macroProcessor.ProcessLine(line)
-		//}
-
-		/*{
-			// I believe this should be generated after the linking etc
-			masmaprg, err := os.Create("MASMAPRG.ASM")
-			if err != nil {
-				log.Printf("couldn't create macro expansion file MASMAPRG.ASM! Ignoring.")
-			} else {
-				defer masmaprg.Close()
-			}
-			for _, line := range macroProcessor.GetOutput() {
-				masmaprg.WriteString(line)
-				assemblerSingleton.FirstPassString(line)
-			}
-		}*/
-		//assemblerSingleton.SecondPass()
 
 		obj, err := asm.GenerateObjectFile()
 		if err != nil {
