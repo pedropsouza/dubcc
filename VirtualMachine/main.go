@@ -19,6 +19,7 @@ import (
 	_ "image/png"
 	"log"
 	"os"
+	"time"
 )
 
 type LinkerMode = linker.LinkerMode
@@ -37,10 +38,12 @@ var executableProvided bool = false
 var window *app.Window
 var editor EditorApp
 var th *material.Theme
-var assembleBtn, stepBtn, resetBtn widget.Clickable
+var assembleBtn, stepBtn, resetBtn, runBtn, stopBtn widget.Clickable
 var menuBar MenuBar
 var hexView = false
 var terminal *Terminal
+var loopTimer *time.Ticker
+var loopChan chan bool = make(chan bool)
 
 var showExplorer bool
 var fe = NewFileExplorer()
@@ -192,6 +195,13 @@ func run(window *app.Window) error {
 
 		case app.FrameEvent:
 			gtx := app.NewContext(&ops, e)
+
+			select {
+			case <- loopChan:
+				StepSimulation()
+			default:
+			}
+
 
 			paint.ColorOp{Color: red}.Add(gtx.Ops)
 			paint.PaintOp{}.Add(gtx.Ops)

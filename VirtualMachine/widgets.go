@@ -6,6 +6,14 @@ import (
 	"dubcc/linker"
 	"dubcc/macroprocessor"
 	"fmt"
+	"image"
+	"image/color"
+	"log"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"time"
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -15,13 +23,6 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/k0kubun/pp/v3"
-	"image"
-	"image/color"
-	"log"
-	"os"
-	"path/filepath"
-	"slices"
-	"strings"
 )
 
 type Linker = linker.Linker
@@ -343,6 +344,17 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 	resetBtnView.Color = black
 	resetBtnView.Font.Typeface = customFont
 
+	runBtnView := material.Button(th, &runBtn, "Run")
+	runBtnView.Background = yellow
+	runBtnView.Color = black
+	runBtnView.Font.Typeface = customFont
+
+  stopBtnView := material.Button(th, &stopBtn, "Stop")
+	stopBtnView.Background = yellow
+	stopBtnView.Color = black
+	stopBtnView.Font.Typeface = customFont
+
+
 	return layout.Flex{
 		Axis:      layout.Horizontal,
 		Alignment: layout.Middle,
@@ -375,6 +387,31 @@ func actionButtonsLayout(gtx layout.Context, th *material.Theme) layout.Dimensio
 					WipeMemory()
 				}
 				return resetBtnView.Layout(gtx)
+			}
+		}),
+    layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			if loopTimer == nil {
+				if runBtn.Clicked(gtx) {
+					sim.State = dubcc.SimStateLoop
+					loopTimer = time.NewTicker(1 * time.Second)
+					go func() {
+						for range loopTimer.C {
+							loopChan <- true
+							time.Sleep(10 * time.Millisecond)
+
+							ooo := op.InvalidateCmd{}
+							gtx.Execute(ooo)
+						}
+					}()
+ 				}
+				return runBtnView.Layout(gtx)
+			} else {
+				if stopBtn.Clicked(gtx) {
+					sim.State = dubcc.SimStatePause
+					loopTimer.Stop()
+					loopTimer = nil
+				}
+				return stopBtnView.Layout(gtx)
 			}
 		}),
 	)
