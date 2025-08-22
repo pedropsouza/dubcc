@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"fmt"
 	"github.com/k0kubun/pp/v3"
 )
 
@@ -242,7 +243,10 @@ func (info *Info) SecondPass() map[string]dubcc.MachineAddress {
 	for _, link := range info.undefSyms.links {
 		sym, found := info.symbols[link.name]
 		if !found {
-			log.Fatalf("undefined symbol: %v (%v)", link.name, link)
+			if !IsExternalSymbol(link.name) {
+				log.Printf("%s", fmt.Sprint(globalSymbols))
+				log.Fatalf("undefined symbol: %v (%v)", link.name, link)
+			}
 		}
 		info.output[link.from] = dubcc.MachineWord(sym)
 	}
@@ -362,8 +366,8 @@ func Directives() map[string]DirectiveHandler {
 		},
 		"extdef": {
 			f: func(info *Info, line dubcc.InLine) {
-				if len(line.Args) != 1 {
-					log.Fatalf("extdef requires a label, got %d", len(line.Args)) // TODO: got what??
+				if line.Label == "" {
+					log.Fatalf("extdef requires a label, got %s", line.Label) // TODO: got what??
 				}
 				externSymbols[line.Label] = true
 				log.Printf("declared external symbol: %s", line.Label)
@@ -409,4 +413,8 @@ func Directives() map[string]DirectiveHandler {
 
 func IsGlobalSymbol(name string) bool {
 	return globalSymbols[name]
+}
+
+func IsExternalSymbol(name string) bool {
+	return externSymbols[name]
 }

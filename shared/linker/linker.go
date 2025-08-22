@@ -169,7 +169,7 @@ func (linker *Linker) buildGlobalSymbolTable() error {
 			if symbolName == "" {
 				continue
 			}
-			// only process defined symbols (not external/underfined)
+			// only process defined symbols (not external/undefined)
 			if symbol.Section != 0xFFF1 { // TODO: what is the undefsym code?
 				// collect all defined symbols with their resolved address
 				if existing, exists := linker.SymbolMap[symbolName]; exists {
@@ -222,11 +222,11 @@ func (linker *Linker) secondPass() error {
 		return err
 	}
 	// apply relocations
-	if  err := linker.createExecutableStructure(); err != nil {
+	if  err := linker.applyRelocations(); err != nil {
 		return err
 	}
 	// build final symbol table and header
-	if  err := linker.createExecutableStructure(); err != nil {
+	if  err := linker.finalizeBinary(); err != nil {
 		return err
 	}
 
@@ -325,7 +325,7 @@ func (linker *Linker) applyRelocations() error {
 			// apply the relocation
 			switch reloc.GetType() {
 			case R_ABSOLUTE:
-				linker.Executable.Sections[0].Data[relocPosition] = uint16(targetAddress & 0xFFFF)
+				linker.Executable.Sections[0].Data[relocPosition] = uint16(targetAddress & 0xFFFF)/2
 			default:
 				return fmt.Errorf("unsupported relocation type: %d", reloc.GetType())
 			}
