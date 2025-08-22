@@ -14,8 +14,13 @@ Trabalho realizado na disciplina de Programação de Sistemas na Universidade Fe
 - [x] Máquina Virtual
 - [x] Montador
 - [x] Processador de Macros
-- [ ] Carregador
-- [ ] Ligador
+- [x] Carregador
+- [x] Ligador
+
+## Features extras
+- File Explorer
+- Auto-complete
+- Syntax Highlight  
 
 ## 💻 Pré-requisitos
 
@@ -25,10 +30,10 @@ Para testar o programa desenvolvido, certifique-se que possua:
 - Sistema operacional Windows ou Linux
 
 ### 💻 Executando
-Dentro do diretório VirtualMachine:
-`go build
-E após isso:
-`./VirtualMachine
+- Dentro do diretório VirtualMachine:
+`go build`
+- E após isso:
+`./VirtualMachine`
 
 ### 🤝 Membros do Grupo
 Líder
