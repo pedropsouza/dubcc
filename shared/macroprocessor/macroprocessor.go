@@ -3,15 +3,17 @@ package macroprocessor
 import (
 	"dubcc"
 	"errors"
+	"fmt"
 	"log"
-	"slices"
+
+	//"slices"
 	"strings"
 )
 
 type Info struct {
-	macros       map[string]Macros
+	macros       map[string]*Macro
 	macroLevel   int
-	//macroStack   []MacroFrame
+	macroStack   []MacroMeta
 	output       []string
 	lineCounter dubcc.MachineAddress
 }
@@ -23,6 +25,7 @@ func (info *Info) GetOutput() []string {
 type Macro struct {
 	args      []string
 	body      []string
+	uses      int
 	definedAt dubcc.MachineAddress //Totalmente opcional, uso futuro para mensagens de erro
 }
 
@@ -42,37 +45,60 @@ func BoolToInt(val bool) int {
 
 func (info *Info) ProcessLine(rawline string) (err error) {
 	line, err := dubcc.ParseAsmLine(rawline)
-  if line.Op == "MACRO" {
+	switch line.Op {
+	case "MACRO":
 		info.macroLevel++
 		return nil
-	} else if line.Op == "MEND" {
+	case "MEND":
 		if info.macroLevel <= 0 {
 			return errors.New("End of macro before start.")
 		}
 		info.macroLevel--
+		meta := info.macroStack[len(info.macroStack)-1]
+		info.macroStack = info.macroStack[:len(info.macroStack)-1]
+		info.macros[meta.name] = &Macro{
+			args: meta.args,
+			body: meta.body,
+			definedAt: dubcc.MachineAddress(info.lineCounter),
+		}
+		return nil
 	}
 
-	expansion, err := info.expandAndRunAllMacros(line)
-	if err != nil {
-		return errors.New("Error expanding macro: " + err.Error())
+	if info.macroLevel > 0 {
+		return info.handleMacroDef(line)
+	} else {
+	  expansion, err := info.expandAndRunAllMacros(line)
+		if err != nil {
+			return errors.New("Error expanding macro: " + err.Error())
+		}
+		info.output = append(info.output, expansion...)
+		return nil
 	}
-	info.output = append(info.output, expansion...)
-	return nil
 }
 
-func (info *Info) handleMacroDef(acc *Macro, line dubcc.InLine) (err error) {
-	if len(acc.body) == 0 {
+func (info *Info) handleMacroDef(line dubcc.InLine) (err error) {
+	// first line for this macro?
+	if (info.macroLevel - len(info.macroStack)) > 0 {
     fields := strings.Fields(line.Raw)
 		if len(fields) == 0 {
 			return errors.New("bad macro syntax!")
 		}
-		acc = MacroMeta{
+		info.macroStack = append(info.macroStack, MacroMeta{
 			name: fields[0],
 			args: fields[1:],
 			body: []string{},
-		}
+		})
 		return nil
 	}
+	
+  expansion, err := info.expandAndRunAllMacros(line)
+	if err != nil {
+		return errors.New("Error expanding macro: " + err.Error())
+	}
+
+	info.macroStack[len(info.macroStack)-1].body = append(info.macroStack[len(info.macroStack)-1].body, expansion...)
+
+	return nil
 }
 
 func (info *Info) expandAndRunAllMacros(line dubcc.InLine) (out []string, err error) {
@@ -82,7 +108,8 @@ func (info *Info) expandAndRunAllMacros(line dubcc.InLine) (out []string, err er
 		lines = lines[1:]
 		macro, mfound := info.macros[line.Op]
 		if mfound {
-			expansion, err := info.expandAndRunMacro(macro, line)
+			macro.uses++
+			expansion, err := info.expandAndRunMacro(*macro, line)
 			if err != nil { return nil, err }
 			for _, expanded_line := range expansion {
 				reparse, err := dubcc.ParseAsmLine(expanded_line)
@@ -96,7 +123,7 @@ func (info *Info) expandAndRunAllMacros(line dubcc.InLine) (out []string, err er
 	return out, err
 }
 
-func (info *Info) expandAndRunMacro(macro Macros, line dubcc.InLine) ([]string, error) {
+func (info *Info) expandAndRunMacro(macro Macro, line dubcc.InLine) ([]string, error) {
 	macro_err_str := []string{"macro error!"}
 	if len(line.Args) != len(macro.args) {
 		return macro_err_str, errors.New("number of arguments doesn't match")
@@ -127,11 +154,14 @@ func (info *Info) expandAndRunMacro(macro Macros, line dubcc.InLine) ([]string, 
 	return macro_expansion, nil
 }
 
+func (info *Info) MacroReport() string {
+	return fmt.Sprintf("Macro report:\n\t%d macros", len(info.macros))
+}
+
 func MakeMacroProcessor() Info {
 	return Info{
-		macros:     make(map[string]Macros),
+		macros:     make(map[string]*Macro),
 		macroLevel: 0,
-		macroStack: make([]MacroFrame,0),
 		output: make([]string,0),
 	}
 }

@@ -241,25 +241,35 @@ func CompileCode() {
 
 	for i := range files {
 		macroProcessor := macroprocessor.MakeMacroProcessor()
-		asm := assembler.MakeAssembler()
-    for line := range strings.SplitSeq(files[i].Data, "\n") {
-        macroProcessor.ProcessLine(line)
+    for _, line := range strings.Split(files[i].Data, "\n") {
+			err := macroProcessor.ProcessLine(line)
+			if err != nil {
+				log.Print(err)
+			}
+    }
+
+    asm := assembler.MakeAssembler()
+		{
+			// I believe this should be generated after the linking etc
+			fname := files[i].Name
+			fname_parts := strings.Split(fname, "/")
+			fname = fname_parts[len(fname_parts)-1]
+			fname = fmt.Sprintf("MASMAPRG-%s.ASM", fname)
+			masmaprg, err := os.Create(fname)
+			if err != nil {
+				log.Printf("couldn't create macro expansion file %s! Ignoring.",
+				fname)
+			} else {
+				defer masmaprg.Close()
+			}
+			for _, line := range macroProcessor.GetOutput() {
+				masmaprg.WriteString(line + "\n")
+				asm.FirstPassString(line)
+			}
 		}
-		fname := files[i].Name
-		fnameParts := strings.Split(fname, "/")
-		fname = fnameParts[len(fnameParts)-1]
-		fname = fmt.Sprintf("MASMAPRG-%s", fname)
-		masmaprg, err := os.Create(fname)
-		if err != nil {
-			log.Printf("couldn't create macro expansion file %s! Ignoring.",
-			fname)
-		} else {
-			defer masmaprg.Close()
-		}
-		for _, line := range macroProcessor.GetOutput() {
-			masmaprg.WriteString(line + "\n")
-			asm.FirstPassString(line)
-		}
+
+		println(macroProcessor.MacroReport())
+
     asm.SecondPass()
     assemblers = append(assemblers, asm)
 
