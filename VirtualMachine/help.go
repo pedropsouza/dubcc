@@ -71,7 +71,13 @@ func NewHelpMenu() *HelpMenu {
 		"R1 - Multi-Purpose Register",
 	}
 	hm.directives = []string{
-		"TEM Q COMPLETAR AQUI",
+		"start",
+		"end",
+		"intdef",
+		"intuse",
+		"const",
+		"space",
+		"stack",
 	}
 
 	return hm

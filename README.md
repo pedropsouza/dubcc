@@ -1,5 +1,7 @@
 # DUBcc
 
+<img src="VirtualMachine/appicon.png" alt="Placeholder">
+
 ## 🔥Dobam Unka Bee Compiler Collection
 
 ### Descrição
