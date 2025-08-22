@@ -4,7 +4,7 @@ import (
 	"dubcc"
 	"dubcc/assembler"
 	"dubcc/macroprocessor"
-	//"dubcc/linker"
+	"dubcc/linker"
 	"encoding/binary"
 	"image"
 	"image/color"
@@ -217,7 +217,7 @@ func CompileCode() {
 	assemblerSingleton = assembler.MakeAssembler()
 	var assemblers = make([]assembler.Info, len(files))
 	//linkerSingleton := linker.MakeRelocatorLinker()
-	//linkerSingleton := linker.MakeAbsoluteLinker(20)
+	linkerSingleton := linker.MakeAbsoluteLinker(20)
 
 	for i := range files {
     asm := assembler.MakeAssembler()
@@ -274,16 +274,17 @@ func CompileCode() {
 		objects = append(objects, files[i].Object)
 	}
 
-	//executable, err := linkerSingleton.GenerateExecutable(objects)
-	//if err != nil {
-	//	log.Print("error: sou um felino bosta\n")
-	//}
+	executable, err := linkerSingleton.GenerateExecutable(objects)
+	if err != nil {
+		log.Print("error: sou um felino bosta\n")
+	}
 
 	// this is concatenating all the object files in a single memory image
-	var mem []dubcc.MachineWord
-	for _, file := range files {
-		mem = append(mem, file.Object.ToMachineWordSlice()...)
-	}
+	//var mem []dubcc.MachineWord
+	//for _, file := range files {
+	//	mem = append(mem, file.Object.ToMachineWordSlice()...)
+	//}
+	var mem []dubcc.MachineWord = executable.ToMachineWordSlice()
 
 	if len(mem) > len(sim.Mem.Work) {
 		panic("program's too big")

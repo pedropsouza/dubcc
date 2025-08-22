@@ -63,7 +63,7 @@ type Symbol struct {
 	NameOffset uint32      					// offset in string table
 	Value      dubcc.MachineAddress	// symbol value
 	Size       uint32       				// symbol size
-	Info       uint8        				// symbol type and binding
+	Info       SymbolBinding        // symbol type and binding
 	Other      uint8        				// reserved
 	Section    uint16       				// section index
 }
@@ -81,7 +81,7 @@ type ObjectFile struct {
 	Symbols     []Symbol					// symbols
 	Relocations []Relocation			// relocations
 	StringTable []byte						// string table
-	stringMap   map[string]uint32	// string map
+	StringMap  	map[string]uint32	// string map
 }
 
 type Section struct {
@@ -96,7 +96,7 @@ func (s *Symbol) Type() SymbolType {
 }
 
 func (s *Symbol) SetInfo(binding SymbolBinding, symType SymbolType) {
-	s.Info = uint8(binding)<<4 | uint8(symType)
+	s.Info = binding << 4 | SymbolBinding(symType)
 }
 
 func (r *Relocation) SymbolIndex() uint32 {
@@ -111,13 +111,29 @@ func (r *Relocation) SetInfo(symbolIndex uint32, relocType RelocationType) {
 	r.Info = (symbolIndex << 8) | uint32(relocType)
 }
 
+func (r *Relocation) GetSymbolIndex() uint32 {
+	return r.Info >> 8
+}
+
+func (r *Relocation) GetType() uint32 {
+	return r.Info & 0xF
+}
+
+func (s *Symbol) GetBinding() SymbolBinding {
+	return s.Info >> 4
+}
+
+func (s *Symbol) GetType() uint8 {
+	return uint8(s.Info & 0xF)
+}
+
 func (info *Info) GenerateObjectFile() (*ObjectFile, error) {
 	obj := &ObjectFile{
 		// why is this a string to uint32
-		stringMap: make(map[string]uint32),
+		StringMap: make(map[string]uint32),
 	}
 	
-	obj.addString("")
+	obj.AddString("")
 	
 	textSection := Section{
 		Name: ".text",
@@ -128,7 +144,7 @@ func (info *Info) GenerateObjectFile() (*ObjectFile, error) {
 		},
 		Data: info.GetOutput(),
 	}
-	textSection.Header.NameOffset = obj.addString(".text")
+	textSection.Header.NameOffset = obj.AddString(".text")
 	obj.Sections = []Section{textSection}
 	
 	obj.buildSymbolTable(info)
@@ -142,14 +158,14 @@ func (info *Info) GenerateObjectFile() (*ObjectFile, error) {
 	return obj, nil
 }
 
-func (obj *ObjectFile) addString(s string) uint32 {
-	if offset, exists := obj.stringMap[s]; exists {
+func (obj *ObjectFile) AddString(s string) uint32 {
+	if offset, exists := obj.StringMap[s]; exists {
 		return offset
 	}
 	offset := uint32(len(obj.StringTable))
 	obj.StringTable = append(obj.StringTable, []byte(s)...)
 	obj.StringTable = append(obj.StringTable, 0) // null terminator
-	obj.stringMap[s] = offset
+	obj.StringMap[s] = offset
 	return offset
 }
 
@@ -157,7 +173,7 @@ func (obj *ObjectFile) buildSymbolTable(info *Info) {
 	// defined symbols
 	for name, addr := range info.symbols {
 		symbol := Symbol{
-			NameOffset: obj.addString(name),
+			NameOffset: obj.AddString(name),
 			Value:      addr,
 			Size:       8, // default size
 			Section:    0, // all symbols in .text section
@@ -177,7 +193,7 @@ func (obj *ObjectFile) buildSymbolTable(info *Info) {
 	for externSym := range externSymbols {
 		if _, exists := info.symbols[externSym]; !exists {
 			symbol := Symbol{
-				NameOffset: obj.addString(externSym),
+				NameOffset: obj.AddString(externSym),
 				Value:      0,     // Undefined
 				Size:       0,
 				Section:    0xFFF1, // SHN_UNDEF
@@ -197,7 +213,7 @@ func (obj *ObjectFile) buildRelocationTable(info *Info) {
 		}
 
 		for i, sym := range obj.Symbols {
-			if obj.getString(sym.NameOffset) == link.name {
+			if obj.GetString(sym.NameOffset) == link.name {
 				reloc.SetInfo(uint32(i), R_ABSOLUTE)
 				break
 			}
@@ -206,7 +222,7 @@ func (obj *ObjectFile) buildRelocationTable(info *Info) {
 	}
 }
 
-func (obj *ObjectFile) getString(offset uint32) string {
+func (obj *ObjectFile) GetString(offset uint32) string {
 	if offset >= uint32(len(obj.StringTable)) {
 		return ""
 	}
