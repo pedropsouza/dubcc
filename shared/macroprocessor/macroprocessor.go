@@ -2,6 +2,7 @@ package macroprocessor
 
 import (
 	"dubcc"
+	_ "dubcc/assembler"
 	"errors"
 	"fmt"
 	"log"
@@ -21,12 +22,7 @@ type Info struct {
 	macros       map[string]*Macro
 	state        int
 	currentDef   *MacroMeta
-	output       []string
-	lineCounter dubcc.MachineAddress
-}
-
-func (info *Info) GetOutput() []string {
-	return info.output
+	lineCount    int
 }
 
 type Macro struct {
@@ -50,28 +46,32 @@ func BoolToInt(val bool) int {
 	}
 }
 
-func (info *Info) ProcessLine(rawline string) (err error) {
+func (info *Info) ProcessLine(rawline string) (output []string, err error) {
 	line, err := dubcc.ParseAsmLine(rawline)
-	if err != nil { return err }
+	if err != nil { return nil, err }
 	if line.Op == "MACRO" {
 		info.state++
 	}
 
 	if info.state != GND {
+		log.Printf("line \"%s\" with macro level %d", rawline, info.state)
+		err := info.handleMacroDef(line)
 		if line.Op == "MEND" {
 			info.state--
+			if info.state == META {
+				info.state--
+			}
 		}
-
-		err := info.handleMacroDef(line)
-		return err
+		return nil,err
 	}
 
+	log.Printf("line \"%s\" with macro level %d", rawline, info.state)
 	expansion, err := info.expandAndRunAllMacros(line)
 	if err != nil {
-		return err
+		return nil,err
 	}
-	info.output = append(info.output, expansion...)
-	return nil
+	output = append(output, expansion...)
+	return output, nil
 }
 
 func (info *Info) handleMacroDef(line dubcc.InLine) (err error) {
@@ -96,13 +96,15 @@ func (info *Info) handleMacroDef(line dubcc.InLine) (err error) {
 		info.macros[meta.name] = &Macro{
 			args: meta.args,
 			body: meta.body,
-			definedAt: dubcc.MachineAddress(info.lineCounter),
+			definedAt: dubcc.MachineAddress(info.lineCount),
 		}
 		info.currentDef = nil
 		return nil
 	}
 
-	info.currentDef.body = append(info.currentDef.body, line.Raw)
+	if info.currentDef != nil {
+		info.currentDef.body = append(info.currentDef.body, line.Raw)
+	}
 
 	return nil
 }
@@ -114,13 +116,18 @@ func (info *Info) expandAndRunAllMacros(line dubcc.InLine) (out []string, err er
 		lines = lines[1:]
 		macro, mfound := info.macros[line.Op]
 		if mfound {
-			macro.uses++
 			expansion, err := info.expandAndRunMacro(*macro, line)
 			if err != nil { return nil, err }
 			for _, expanded_line := range expansion {
-				reparse, err := dubcc.ParseAsmLine(expanded_line)
+				innerLines, err := info.ProcessLine(expanded_line)
 				if err != nil { return nil, err }
-				lines = append(lines, reparse)
+				reparse := []dubcc.InLine{}
+				for _, line := range innerLines {
+					reparsedLine, err := dubcc.ParseAsmLine(line)
+					if err != nil { return nil, err }
+					reparse = append(reparse, reparsedLine)
+				}
+				lines = append(lines, reparse...)
 			}
 		} else {
 			out = append(out, line.Raw)
@@ -164,11 +171,11 @@ func (info *Info) MacroReport() string {
 	return fmt.Sprintf("Macro report:\n\t%d macros", len(info.macros))
 }
 
-func MakeMacroProcessor() Info {
+func MakeMacroProcessor(lineNum int) Info {
 	return Info{
 		macros: make(map[string]*Macro),
 		state: GND,
-		output: make([]string,0),
+		lineCount: lineNum,
 	}
 }
 

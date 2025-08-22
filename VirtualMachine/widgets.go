@@ -241,12 +241,14 @@ func CompileCode() {
 	}
 
 	for i := range files {
-		macroProcessor := macroprocessor.MakeMacroProcessor()
+		macroProcessor := macroprocessor.MakeMacroProcessor(0)
+		expanded := []string{}
     for _, line := range strings.Split(files[i].Data, "\n") {
-			err := macroProcessor.ProcessLine(line)
+			lines, err := macroProcessor.ProcessLine(line)
 			if err != nil {
 				log.Print(err)
 			}
+			expanded = append(expanded, lines...)
     }
 
     asm := assembler.MakeAssembler()
@@ -263,7 +265,7 @@ func CompileCode() {
 			} else {
 				defer masmaprg.Close()
 			}
-			for _, line := range macroProcessor.GetOutput() {
+			for _, line := range expanded {
 				masmaprg.WriteString(line + "\n")
 				asm.FirstPassString(line)
 			}
