@@ -4,7 +4,7 @@ import (
 	"dubcc"
 	"dubcc/assembler"
 	"dubcc/macroprocessor"
-	"dubcc/linker"
+	//"dubcc/linker"
 	"encoding/binary"
 	"image"
 	"image/color"
