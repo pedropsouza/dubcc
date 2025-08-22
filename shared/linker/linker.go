@@ -173,9 +173,13 @@ func (linker *Linker) buildGlobalSymbolTable() error {
 			// only process defined symbols (not external/undefined)
 			if symbol.Section != 0xFFF1 { // TODO: what is the undefsym code?
 				// collect all defined symbols with their resolved address
-				if existing, exists := linker.SymbolMap[symbolName]; exists {
-					return fmt.Errorf("symbol '%s' defined in multiple objects (obj %d and obj %d)", 
-						symbolName, existing.ObjectIndex, objIdx)
+				existing, exists := linker.SymbolMap[symbolName]
+				conflicting := exists
+				conflicting = conflicting && symbol.GetBinding() == assembler.STB_GLOBAL && existing.Symbol.GetBinding() == assembler.STB_GLOBAL
+				if conflicting {
+					return fmt.Errorf("symbol '%s' defined in multiple objects (obj %d and obj %d)\n%s | %s", 
+						symbolName, existing.ObjectIndex, objIdx,
+						pp.Sprint(symbol), pp.Sprint(existing.Symbol))
 				}
 
 				relAddress := linkedSection.BaseAddress/2 + symbol.Value

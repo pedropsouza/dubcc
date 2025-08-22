@@ -201,16 +201,15 @@ func (obj *ObjectFile) buildSymbolTable(info *Info) {
 	
 	// external symbols as undefined
 	for externSym := range externSymbols {
-		if _, exists := info.symbols[externSym]; !exists {
-			symbol := Symbol{
-				NameOffset: obj.AddString(externSym),
-				Value:      0,     // Undefined
-				Size:       0,
-				Section:    0xFFF1, // SHN_UNDEF
-			}
-			symbol.SetInfo(STB_GLOBAL, STT_NOTYPE)
-			obj.Symbols = append(obj.Symbols, symbol)
+		fmt.Printf("%s in an external symbol\n", externSym)
+		symbol := Symbol{
+			NameOffset: obj.AddString(externSym),
+			Value:      0,     // Undefined
+			Size:       0,
+			Section:    0xFFF1, // SHN_UNDEF
 		}
+		symbol.SetInfo(STB_GLOBAL, STT_NOTYPE)
+		obj.Symbols = append(obj.Symbols, symbol)
 	}
 }
 
