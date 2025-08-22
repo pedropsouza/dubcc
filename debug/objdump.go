@@ -28,4 +28,5 @@ func main() {
 		panic(err.Error())
 	}
 	pp.Println(obj)
+	print(obj.PrettyPrint())
 }

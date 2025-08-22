@@ -4,6 +4,8 @@ import (
 	"dubcc"
 	"encoding/binary"
 	"io"
+	"fmt"
+	"github.com/k0kubun/pp/v3"
 )
 
 type DulfSection    uint32
@@ -330,6 +332,7 @@ func Read(r io.Reader) (obj *ObjectFile, err error) {
 	}
 	// section data
 	for idx, section := range obj.Sections {
+		obj.Sections[idx].Name = obj.GetString(section.Header.NameOffset)
 		for range (section.Header.Size/2) {
 			var word dubcc.MachineWord
 			if err := binary.Read(r, binary.BigEndian, &word); err != nil {
@@ -340,4 +343,42 @@ func Read(r io.Reader) (obj *ObjectFile, err error) {
 	}
 
 	return obj, nil
+}
+
+func (obj *ObjectFile) PrettyPrint() string {
+	sections := ""
+	for _, section := range obj.Sections {
+		sections += fmt.Sprintf(
+			"Section %s with header %s and data:\n%s\n",
+			section.Name, pp.Sprint(section.Header), pp.Sprint(section.Data))
+	}
+
+	symbols := ""
+	for i, symb := range obj.Symbols {
+		symbols += fmt.Sprintf(
+			"Symbol %d: %s, %s",
+			i,
+			obj.GetString(symb.NameOffset),
+			pp.Sprint(symb),
+		)
+	}
+	return fmt.Sprintf(
+`Object file:
+Headers
+%s
+Sections
+%s
+Symbols
+%s
+Relocations
+%s
+StringTable
+%s
+`,
+pp.Sprint(obj.Header),
+sections,
+symbols,
+pp.Sprint(obj.Relocations),
+obj.StringTable,
+)
 }

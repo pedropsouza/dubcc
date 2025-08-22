@@ -301,6 +301,8 @@ func CompileCode() {
 		mem = append(mem, section.Data...)
 	}
 
+	print(executable.PrettyPrint())
+
 	if len(mem) > len(sim.Mem.Work) {
 		panic("program's too big")
 	}

@@ -222,9 +222,9 @@ func (linker *Linker) secondPass() error {
 		return err
 	}
 	// apply relocations
-	if  err := linker.applyRelocations(); err != nil {
-		return err
-	}
+	//if  err := linker.applyRelocations(); err != nil {
+	//	return err
+	//}
 	// build final symbol table and header
 	if  err := linker.finalizeBinary(); err != nil {
 		return err
